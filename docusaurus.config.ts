@@ -72,7 +72,8 @@ const config: Config = {
         },
         { to: '/docs/chatbot', label: 'RAG Chatbot', position: 'left' },
         {
-          href: 'https://github.com/your-username/physical-ai-and-humanoid-robotics-textbook',
+          //href: 'https://github.com/your-username/physical-ai-and-humanoid-robotics-textbook',
+          href:'https://github.com/Sana-Farasat/AI-Native-Book',
           label: 'GitHub',
           position: 'right',
         },
