@@ -1,0 +1,399 @@
+---
+title: "Lab Exercise: Digital Twin Simulation"
+---
+
+# Lab Exercise: Creating Digital Twins with Gazebo and Isaac Sim
+
+## Objective
+In this lab, you'll create a digital twin of a simple humanoid robot in both Gazebo and Isaac Sim, comparing the capabilities of each simulation environment.
+
+## Prerequisites
+- Gazebo Classic or Garden installed
+- Isaac Sim (NVIDIA Omniverse) installed (optional)
+- Basic understanding of URDF/SDF robot models
+
+## Theory
+Digital twins enable rapid prototyping, testing, and AI training without risk to physical hardware. This lab compares Gazebo and Isaac Sim for humanoid robot simulation.
+
+## Implementation
+
+### Step 1: Create a Simple Humanoid URDF Model
+Create a simplified humanoid model with basic joints and links:
+
+```xml
+<!-- humanoid.urdf -->
+<?xml version="1.0"?>
+<robot name="simple_humanoid">
+  <!-- Base link -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.3 0.2 0.5"/>
+      </geometry>
+      <material name="blue">
+        <color rgba="0 0 1 0.8"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.3 0.2 0.5"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="10.0"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+
+  <!-- Head -->
+  <link name="head">
+    <visual>
+      <geometry>
+        <sphere radius="0.1"/>
+      </geometry>
+      <material name="white">
+        <color rgba="1 1 1 0.8"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <sphere radius="0.1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="1.0"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <joint name="head_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="head"/>
+    <origin xyz="0 0 0.4"/>
+  </joint>
+
+  <!-- Left Arm -->
+  <link name="left_upper_arm">
+    <visual>
+      <geometry>
+        <cylinder length="0.3" radius="0.05"/>
+      </geometry>
+      <material name="red">
+        <color rgba="1 0 0 0.8"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.3" radius="0.05"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.5"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <joint name="left_shoulder" type="revolute">
+    <parent link="base_link"/>
+    <child link="left_upper_arm"/>
+    <origin xyz="0.2 0 0.1" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10.0" velocity="1.0"/>
+  </joint>
+
+  <link name="left_lower_arm">
+    <visual>
+      <geometry>
+        <cylinder length="0.3" radius="0.05"/>
+      </geometry>
+      <material name="red">
+        <color rgba="1 0 0 0.8"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.3" radius="0.05"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.5"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <joint name="left_elbow" type="revolute">
+    <parent link="left_upper_arm"/>
+    <child link="left_lower_arm"/>
+    <origin xyz="0 0 -0.3" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10.0" velocity="1.0"/>
+  </joint>
+
+  <!-- Right Arm -->
+  <link name="right_upper_arm">
+    <visual>
+      <geometry>
+        <cylinder length="0.3" radius="0.05"/>
+      </geometry>
+      <material name="red">
+        <color rgba="1 0 0 0.8"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.3" radius="0.05"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.5"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <joint name="right_shoulder" type="revolute">
+    <parent link="base_link"/>
+    <child link="right_upper_arm"/>
+    <origin xyz="-0.2 0 0.1" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10.0" velocity="1.0"/>
+  </joint>
+
+  <link name="right_lower_arm">
+    <visual>
+      <geometry>
+        <cylinder length="0.3" radius="0.05"/>
+      </geometry>
+      <material name="red">
+        <color rgba="1 0 0 0.8"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.3" radius="0.05"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.5"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <joint name="right_elbow" type="revolute">
+    <parent link="right_upper_arm"/>
+    <child link="right_lower_arm"/>
+    <origin xyz="0 0 -0.3" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10.0" velocity="1.0"/>
+  </joint>
+
+  <!-- Left Leg -->
+  <link name="left_upper_leg">
+    <visual>
+      <geometry>
+        <cylinder length="0.4" radius="0.06"/>
+      </geometry>
+      <material name="green">
+        <color rgba="0 1 0 0.8"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.4" radius="0.06"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="1.0"/>
+      <inertia ixx="0.002" ixy="0.0" ixz="0.0" iyy="0.002" iyz="0.0" izz="0.002"/>
+    </inertial>
+  </link>
+
+  <joint name="left_hip" type="revolute">
+    <parent link="base_link"/>
+    <child link="left_upper_leg"/>
+    <origin xyz="0.1 -0.1 -0.25" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10.0" velocity="1.0"/>
+  </joint>
+
+  <link name="left_lower_leg">
+    <visual>
+      <geometry>
+        <cylinder length="0.4" radius="0.06"/>
+      </geometry>
+      <material name="green">
+        <color rgba="0 1 0 0.8"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.4" radius="0.06"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="1.0"/>
+      <inertia ixx="0.002" ixy="0.0" ixz="0.0" iyy="0.002" iyz="0.0" izz="0.002"/>
+    </inertial>
+  </link>
+
+  <joint name="left_knee" type="revolute">
+    <parent link="left_upper_leg"/>
+    <child link="left_lower_leg"/>
+    <origin xyz="0 0 -0.4" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10.0" velocity="1.0"/>
+  </joint>
+
+  <!-- Right Leg -->
+  <link name="right_upper_leg">
+    <visual>
+      <geometry>
+        <cylinder length="0.4" radius="0.06"/>
+      </geometry>
+      <material name="green">
+        <color rgba="0 1 0 0.8"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.4" radius="0.06"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="1.0"/>
+      <inertia ixx="0.002" ixy="0.0" ixz="0.0" iyy="0.002" iyz="0.0" izz="0.002"/>
+    </inertial>
+  </link>
+
+  <joint name="right_hip" type="revolute">
+    <parent link="base_link"/>
+    <child link="right_upper_leg"/>
+    <origin xyz="0.1 0.1 -0.25" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10.0" velocity="1.0"/>
+  </joint>
+
+  <link name="right_lower_leg">
+    <visual>
+      <geometry>
+        <cylinder length="0.4" radius="0.06"/>
+      </geometry>
+      <material name="green">
+        <color rgba="0 1 0 0.8"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.4" radius="0.06"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="1.0"/>
+      <inertia ixx="0.002" ixy="0.0" ixz="0.0" iyy="0.002" iyz="0.0" izz="0.002"/>
+    </inertial>
+  </link>
+
+  <joint name="right_knee" type="revolute">
+    <parent link="right_upper_leg"/>
+    <child link="right_lower_leg"/>
+    <origin xyz="0 0 -0.4" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10.0" velocity="1.0"/>
+  </joint>
+</robot>
+```
+
+### Step 2: Setting up Gazebo Simulation
+To run this model in Gazebo, create a launch file:
+
+```xml
+<!-- launch/humanoid_gazebo.launch -->
+<launch>
+  <!-- Load the robot description -->
+  <param name="robot_description" command="$(find executable which xacro) $(find package name)/urdf/humanoid.urdf.xacro" />
+  
+  <!-- Spawn the robot in Gazebo -->
+  <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_entity.py" args="-entity simple_humanoid -database robot_description" />
+  
+  <!-- Launch Gazebo with a world file -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find package name)/worlds/simple_room.world" />
+  </include>
+</launch>
+```
+
+And then run:
+```bash
+# Launch the simulation
+roslaunch package_name humanoid_gazebo.launch
+
+# In another terminal, you can control the robot with commands like:
+rostopic pub /left_shoulder_position_controller/command std_msgs/Float64 "data: 0.5"
+```
+
+### Step 3: Isaac Sim (Conceptual Implementation)
+For Isaac Sim, you would typically create the robot using Omniverse's UI or Python API:
+
+```python
+# Isaac Sim robot creation (conceptual)
+import omni
+from omni.isaac.core import World
+from omni.isaac.core.utils.stage import add_reference_to_stage
+from omni.isaac.core.utils.prims import create_primitive, get_prim_at_path
+from pxr import Gf
+
+# Create a world
+world = World(stage_units_in_meters=1.0)
+
+# Add your robot from USD file (this would be your humanoid model converted to USD)
+add_reference_to_stage(
+    usd_path="path/to/humanoid.usd", 
+    prim_path="/World/HumanoidRobot"
+)
+
+# Add objects to interact with
+create_primitive(
+    prim_path="/World/Cube",
+    primitive_type="Cube",
+    position=Gf.Vec3f(0.5, 0.0, 0.5),
+    scale=Gf.Vec3f(0.1, 0.1, 0.1)
+)
+
+# Reset and step the world
+world.reset()
+for i in range(100):
+    world.step(render=True)
+    # Control the robot here with joint commands
+```
+
+### Step 4: Physics Comparison
+Compare the physics simulation between environments:
+
+```python
+# Compare physics properties
+def compare_physics():
+    print("Gazebo Physics:")
+    print("- Uses ODE, Bullet, or DART engines")
+    print("- Good for basic dynamics and collision detection")
+    print("- Moderate rendering quality")
+    
+    print("\nIsaac Sim Physics:")
+    print("- Uses PhysX engine")
+    print("- Accurate contact simulation")
+    print("- Photorealistic rendering")
+    print("- Synthetic data generation capabilities")
+
+compare_physics()
+```
+
+## Results and Discussion
+1. How do the physics engines in Gazebo and Isaac Sim differ?
+2. What are the advantages of photorealistic rendering in Isaac Sim?
+3. Which simulation environment is better for training AI models?
+
+## Extensions
+- Add sensors (cameras, IMUs, force/torque sensors) to your robot model
+- Implement a basic controller to make the robot walk in the simulation
+- Generate synthetic data in Isaac Sim for computer vision training
+
+## Conclusion
+This lab demonstrated the process of creating digital twins in both Gazebo and Isaac Sim. Each environment has unique strengths that make it suitable for different aspects of humanoid robot development, from basic dynamics in Gazebo to photorealistic simulation with synthetic data generation in Isaac Sim.

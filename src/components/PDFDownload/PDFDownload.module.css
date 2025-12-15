@@ -1,0 +1,67 @@
+/**
+ * CSS module for the PDF download component
+ */
+/* .pdfDownloadContainer {
+  margin: 1.5rem 0;
+  text-align: center;
+}
+
+.pdfButton {
+  background: linear-gradient(135deg, #6B46C1 0%, #553C9A 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 15px rgba(107, 70, 193, 0.4);
+}
+
+.pdfButton:hover {
+  background: linear-gradient(135deg, #553C9A 0%, #4C3688 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(107, 70, 193, 0.6);
+}
+
+.glowButton {
+  position: relative;
+  overflow: hidden;
+}
+
+.glowButton::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 10px;
+  background: linear-gradient(45deg, var(--ifm-color-primary), var(--ifm-color-secondary), var(--ifm-color-primary));
+  z-index: -1;
+  animation: glowing 2s linear infinite;
+  opacity: 0.5;
+}
+
+@keyframes glowing {
+  0% { background-position: 0 0; }
+  50% { background-position: 400% 0; }
+  100% { background-position: 0 0; }
+}
+
+.buttonContent {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .pdfButton {
+    width: 100%;
+    max-width: 300px;
+  }
+} 
+ */

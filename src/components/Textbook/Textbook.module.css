@@ -1,0 +1,154 @@
+/* Textbook component styles */
+.textbook {
+  max-width: var(--ifm-container-width);
+  margin: 0 auto;
+  padding: 2rem 0;
+}
+
+.textbook.centered {
+  text-align: center;
+}
+
+.textbook.fullWidth {
+  max-width: 100%;
+}
+
+/* Code example styles */
+.codeExample {
+  margin: 1.5rem 0;
+  border-radius: var(--ifm-global-radius);
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.codeTitle {
+  background-color: var(--ifm-color-emphasis-200);
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: var(--ifm-color-content);
+}
+
+.codeBlock {
+  padding: 0;
+  overflow: auto;
+}
+
+.codeBlock pre {
+  margin: 0;
+  padding: 1rem;
+  background-color: var(--prism-background-color);
+  color: var(--prism-color);
+  font-size: var(--ifm-code-font-size);
+  overflow: auto;
+}
+
+/* Visual element styles */
+.visualElement {
+  margin: 1.5rem auto;
+  text-align: center;
+  max-width: 100%;
+  display: block;
+}
+
+.visualElement img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--ifm-global-radius);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.visualCaption {
+  margin-top: 0.5rem;
+  font-style: italic;
+  color: var(--ifm-color-emphasis-700);
+  text-align: center;
+}
+
+.visualElement.screenshot img {
+  border: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.visualElement.diagram img {
+  border: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.visualElement.architecture img {
+  border: 2px solid var(--color-primary);
+}
+
+.visualElement.mermaid img {
+  border: 1px solid var(--color-primary-dark);
+}
+
+/* Learning outcomes styles */
+.learningOutcomes {
+  background-color: var(--ifm-color-emphasis-100);
+  padding: 1.5rem;
+  border-radius: var(--ifm-global-radius);
+  margin: 1.5rem 0;
+  border-left: 4px solid var(--color-primary);
+}
+
+.learningOutcomes h3 {
+  margin-top: 0;
+  color: var(--color-primary);
+}
+
+.learningOutcomes ul {
+  padding-left: 1.5rem;
+  margin-bottom: 0;
+}
+
+.learningOutcomes li {
+  margin-bottom: 0.5rem;
+}
+
+/* Hands-on lab styles */
+.handsOnLab {
+  background-color: var(--ifm-color-emphasis-100);
+  padding: 1.5rem;
+  border-radius: var(--ifm-global-radius);
+  margin: 1.5rem 0;
+  border-left: 4px solid var(--color-secondary);
+}
+
+.handsOnLab h3 {
+  margin-top: 0;
+  color: var(--color-secondary);
+}
+
+.handsOnLab ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.handsOnLab li {
+  margin-bottom: 0.5rem;
+}
+
+/* Responsive design */
+@media (max-width: 996px) {
+  .textbook {
+    padding: 1rem 0;
+    margin: 0 1rem;
+  }
+  
+  .visualElement {
+    margin: 1rem auto;
+  }
+  
+  .codeExample, .learningOutcomes, .handsOnLab {
+    padding: 1rem;
+  }
+}
+
+/* Dark mode styles */
+html[data-theme='dark'] .visualElement img {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+html[data-theme='dark'] .codeTitle {
+  background-color: var(--ifm-color-emphasis-600);
+  color: var(--ifm-color-content-inverse);
+}

@@ -1,0 +1,139 @@
+.visualContent {
+  margin: 1.5rem auto;
+  text-align: center;
+  max-width: 100%;
+  display: block;
+  padding: 1rem;
+}
+
+.visualContent.screenshot {
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 4px;
+  background-color: white;
+}
+
+.visualContent.diagram {
+  border: 1px solid var(--color-primary);
+  border-radius: 8px;
+  background-color: var(--ifm-color-emphasis-100);
+}
+
+.visualContent.architecture {
+  border: 2px solid var(--color-primary-dark);
+  border-radius: 8px;
+  background-color: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.visualContent.mermaid {
+  border: 1px solid var(--color-secondary);
+  border-radius: 8px;
+  background-color: var(--ifm-color-emphasis-100);
+}
+
+.content {
+  margin: 0 auto;
+}
+
+.image {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--ifm-global-radius);
+}
+
+.mermaidContainer {
+  padding: 1rem;
+  text-align: center;
+}
+
+.caption {
+  margin-top: 0.5rem;
+  font-style: italic;
+  color: var(--ifm-color-emphasis-700);
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.title {
+  margin: 0 0 0.5rem 0;
+  color: var(--color-primary);
+  text-align: center;
+  font-size: 1rem;
+}
+
+/* Mermaid diagram specific styles */
+.mermaidDiagram {
+  margin: 1.5rem auto;
+  text-align: center;
+  max-width: 100%;
+  display: block;
+  padding: 1rem;
+  border: 1px solid var(--color-secondary);
+  border-radius: 8px;
+  background-color: var(--ifm-color-emphasis-100);
+}
+
+.mermaidCode {
+  background-color: var(--prism-background-color);
+  color: var(--prism-color);
+  padding: 1rem;
+  border-radius: var(--ifm-global-radius);
+  text-align: left;
+  overflow-x: auto;
+  font-size: 0.8rem;
+}
+
+/* Gallery styles */
+.visualGallery {
+  margin: 2rem 0;
+}
+
+.galleryTitle {
+  text-align: center;
+  color: var(--color-primary);
+  margin-bottom: 1.5rem;
+}
+
+.galleryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .galleryGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .visualContent {
+    padding: 0.5rem;
+  }
+  
+  .mermaidCode {
+    font-size: 0.7rem;
+  }
+}
+
+/* Dark mode styles */
+html[data-theme='dark'] .visualContent.screenshot {
+  background-color: var(--ifm-background-surface-color);
+  border-color: var(--ifm-color-emphasis-500);
+}
+
+html[data-theme='dark'] .visualContent.diagram {
+  background-color: var(--ifm-background-surface-color);
+}
+
+html[data-theme='dark'] .visualContent.architecture {
+  background-color: var(--ifm-background-surface-color);
+}
+
+html[data-theme='dark'] .visualContent.mermaid {
+  background-color: var(--ifm-background-surface-color);
+}
+
+html[data-theme='dark'] .mermaidDiagram {
+  background-color: var(--ifm-background-surface-color);
+}

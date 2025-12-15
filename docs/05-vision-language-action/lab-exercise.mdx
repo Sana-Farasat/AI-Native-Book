@@ -1,0 +1,577 @@
+---
+title: "Lab Exercise: Vision-Language-Action Models"
+---
+
+# Lab Exercise: Implementing Vision-Language-Action (VLA) Models
+
+## Objective
+In this lab, you'll implement a basic Vision-Language-Action (VLA) model that maps visual input and natural language commands to robot actions using the NVIDIA Isaac platform.
+
+## Prerequisites
+- NVIDIA Isaac Sim and ROS setup
+- PyTorch and transformers libraries
+- Basic understanding of multi-modal neural networks
+- NVIDIA GPU with CUDA support
+
+## Theory
+Vision-Language-Action (VLA) models enable robots to understand natural language commands and execute corresponding actions based on visual perception. These models bridge high-level human communication with low-level robot control.
+
+## Implementation
+
+### Step 1: Implement the VLA Model Architecture
+Create a multi-modal model that combines vision and language inputs:
+
+```python
+# vla_model.py
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torchvision.models as models
+from transformers import AutoTokenizer, AutoModel
+import numpy as np
+
+class VisionEncoder(nn.Module):
+    """Vision encoder using a pre-trained ResNet model"""
+    def __init__(self, pretrained=True):
+        super(VisionEncoder, self).__init__()
+        # Use a pre-trained ResNet as the backbone
+        self.backbone = models.resnet18(pretrained=pretrained)
+        # Remove the final classification layer
+        self.features = nn.Sequential(*list(self.backbone.children())[:-1])
+        # Add a projection layer to match language model dimensions
+        self.projection = nn.Linear(512, 512)  # ResNet18 outputs 512-dim features
+    
+    def forward(self, images):
+        # Extract features from images
+        features = self.features(images)  # [batch_size, 512, 1, 1]
+        features = features.view(features.size(0), -1)  # [batch_size, 512]
+        projected = self.projection(features)  # [batch_size, 512]
+        return projected
+
+class LanguageEncoder(nn.Module):
+    """Language encoder using a transformer model"""
+    def __init__(self, model_name='distilbert-base-uncased', embedding_dim=512):
+        super(LanguageEncoder, self).__init__()
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.model = AutoModel.from_pretrained(model_name)
+        self.projection = nn.Linear(self.model.config.hidden_size, embedding_dim)
+        
+        # Add padding token if not present
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+    
+    def forward(self, texts):
+        # Tokenize input texts
+        inputs = self.tokenizer(
+            texts, 
+            return_tensors='pt', 
+            padding=True, 
+            truncation=True, 
+            max_length=128
+        )
+        
+        # Get embeddings from the transformer
+        outputs = self.model(**inputs)
+        # Use the [CLS] token embedding
+        embeddings = outputs.last_hidden_state[:, 0, :]  # [batch_size, hidden_size]
+        projected = self.projection(embeddings)  # [batch_size, 512]
+        
+        return projected
+
+class ActionDecoder(nn.Module):
+    """Action decoder that maps multimodal embeddings to robot actions"""
+    def __init__(self, embedding_dim=512, num_actions=32):
+        super(ActionDecoder, self).__init__()
+        self.num_actions = num_actions
+        
+        # Simple MLP for action prediction
+        self.mlp = nn.Sequential(
+            nn.Linear(embedding_dim, 512),
+            nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.Linear(512, self.num_actions)  # Output one value per joint
+        )
+        
+    def forward(self, multimodal_embedding):
+        actions = self.mlp(multimodal_embedding)
+        # Apply tanh to bound actions to [-1, 1] range
+        normalized_actions = torch.tanh(actions)
+        return normalized_actions
+
+class VLAModel(nn.Module):
+    """Complete Vision-Language-Action model"""
+    def __init__(self, num_robot_joints=32):
+        super(VLAModel, self).__init__()
+        
+        self.vision_encoder = VisionEncoder()
+        self.language_encoder = LanguageEncoder()
+        self.action_decoder = ActionDecoder(num_actions=num_robot_joints)
+        
+        # Cross-attention mechanism for fusion
+        self.fusion_attention = nn.MultiheadAttention(
+            embed_dim=512, 
+            num_heads=8,
+            dropout=0.1
+        )
+        
+        # Layer norm for stability
+        self.layer_norm = nn.LayerNorm(512)
+    
+    def forward(self, images, commands):
+        # Encode visual and language inputs
+        visual_features = self.vision_encoder(images)  # [batch_size, 512]
+        language_features = self.language_encoder(commands)  # [batch_size, 512]
+        
+        # Expand dimensions for attention mechanism
+        visual_expanded = visual_features.unsqueeze(1)  # [batch_size, 1, 512]
+        language_expanded = language_features.unsqueeze(1)  # [batch_size, 1, 512]
+        
+        # Cross-attention fusion (simplified: concatenate features)
+        # In a full implementation, we'd use proper cross-attention
+        fused_features = self.layer_norm(visual_features + language_features)
+        
+        # Decode to robot actions
+        actions = self.action_decoder(fused_features)
+        
+        return actions
+
+# Example usage
+def main():
+    # Initialize the VLA model
+    vla_model = VLAModel(num_robot_joints=32)  # 32 DoF humanoid robot
+    
+    # Create dummy inputs for testing
+    batch_size = 2
+    images = torch.randn(batch_size, 3, 224, 224)  # Batch of RGB images
+    commands = ["Pick up the red cup", "Move to the left"]  # Natural language commands
+    
+    # Forward pass
+    actions = vla_model(images, commands)
+    
+    print(f"Input image shape: {images.shape}")
+    print(f"Input commands: {commands}")
+    print(f"Output actions shape: {actions.shape}")  # Should be [batch_size, 32]
+    print(f"Sample action values: {actions[0, :5]}")  # First 5 joint values
+
+if __name__ == "__main__":
+    main()
+```
+
+### Step 2: Create a Training Dataset Class
+Define a dataset class for training the VLA model:
+
+```python
+# vla_dataset.py
+import torch
+from torch.utils.data import Dataset
+import numpy as np
+import cv2
+import random
+
+class VLADataset(Dataset):
+    """Dataset for Vision-Language-Action training"""
+    
+    def __init__(self, data_size=1000):
+        self.data_size = data_size
+        
+        # Define object classes and commands
+        self.objects = ["red cup", "blue ball", "green box", "yellow cone"]
+        self.commands = [
+            "pick up the {}", 
+            "move to {}", 
+            "avoid {}", 
+            "grasp the {}",
+            "navigate around {}"
+        ]
+        
+        # Define action space (simplified joint positions)
+        self.action_space = 32  # 32 DoF humanoid robot
+    
+    def __len__(self):
+        return self.data_size
+    
+    def __getitem__(self, idx):
+        # Generate synthetic data
+        
+        # Create a random "image" (in practice, this would be real image data)
+        image = self.generate_synthetic_image()
+        
+        # Create a random command
+        obj = random.choice(self.objects)
+        cmd_template = random.choice(self.commands)
+        command = cmd_template.format(obj)
+        
+        # Generate a corresponding action based on the command
+        action = self.generate_action_for_command(command)
+        
+        return {
+            'image': torch.FloatTensor(image),  # [3, 224, 224]
+            'command': command,
+            'action': torch.FloatTensor(action)  # [32,]
+        }
+    
+    def generate_synthetic_image(self):
+        """Generate a synthetic image with basic shapes and colors"""
+        # Create a random colored background
+        img = np.random.randint(0, 50, (224, 224, 3), dtype=np.uint8)
+        
+        # Add a random shape (representing an object)
+        shape_type = random.choice(['circle', 'rectangle', 'triangle'])
+        
+        if shape_type == 'circle':
+            center = (random.randint(50, 174), random.randint(50, 174))
+            radius = random.randint(20, 50)
+            color = [random.randint(100, 255), random.randint(100, 255), random.randint(100, 255)]
+            cv2.circle(img, center, radius, color, -1)
+        elif shape_type == 'rectangle':
+            pt1 = (random.randint(30, 100), random.randint(30, 100))
+            pt2 = (random.randint(124, 194), random.randint(124, 194))
+            color = [random.randint(100, 255), random.randint(100, 255), random.randint(100, 255)]
+            cv2.rectangle(img, pt1, pt2, color, -1)
+        else:  # triangle
+            pts = np.array([
+                [random.randint(30, 194), random.randint(30, 194)],
+                [random.randint(30, 194), random.randint(30, 194)],
+                [random.randint(30, 194), random.randint(30, 194)]
+            ], np.int32)
+            color = [random.randint(100, 255), random.randint(100, 255), random.randint(100, 255)]
+            cv2.fillPoly(img, [pts], color)
+        
+        # Convert to tensor format [C, H, W] and normalize
+        img = img.transpose(2, 0, 1).astype(np.float32) / 255.0
+        return img
+    
+    def generate_action_for_command(self, command):
+        """Generate a plausible action vector based on the command"""
+        action = np.zeros(self.action_space, dtype=np.float32)
+        
+        if "pick" in command or "grasp" in command:
+            # Move arm joints
+            action[16:20] = [0.5, -0.5, 0.2, 0.0]  # Shoulder and elbow joints
+        elif "move" in command or "navigate" in command:
+            # Move body joints for navigation
+            action[0:4] = [0.1, -0.1, 0.1, -0.1]  # Hip joints for stepping
+        elif "avoid" in command:
+            # Move joints to avoid obstacle
+            action[8:12] = [0.3, -0.3, 0.0, 0.0]  # Arm joints to move out of way
+        
+        # Add small random adjustments
+        action += np.random.normal(0, 0.05, self.action_space)
+        
+        # Clip to reasonable ranges
+        action = np.clip(action, -1.0, 1.0)
+        
+        return action
+
+# Example usage
+def main():
+    dataset = VLADataset(data_size=100)
+    sample = dataset[0]
+    
+    print(f"Image shape: {sample['image'].shape}")
+    print(f"Command: {sample['command']}")
+    print(f"Action shape: {sample['action'].shape}")
+    print(f"Sample action values: {sample['action'][:5]}")
+
+if __name__ == "__main__":
+    main()
+```
+
+### Step 3: Create Training Loop
+Implement a training loop for the VLA model:
+
+```python
+# vla_train.py
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader
+from vla_model import VLAModel
+from vla_dataset import VLADataset
+import matplotlib.pyplot as plt
+
+def train_vla_model():
+    """Train the Vision-Language-Action model"""
+    
+    # Initialize model
+    model = VLAModel(num_robot_joints=32)
+    
+    # Initialize dataset and dataloader
+    dataset = VLADataset(data_size=1000)
+    dataloader = DataLoader(dataset, batch_size=8, shuffle=True, num_workers=2)
+    
+    # Define loss function and optimizer
+    criterion = nn.MSELoss()  # Mean Squared Error for continuous action values
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    
+    # Training parameters
+    num_epochs = 20
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    
+    # Track loss for plotting
+    losses = []
+    
+    print(f"Starting training on {device}...")
+    
+    for epoch in range(num_epochs):
+        epoch_loss = 0.0
+        
+        for batch_idx, batch in enumerate(dataloader):
+            # Prepare inputs
+            images = batch['image'].to(device)  # [batch_size, 3, 224, 224]
+            commands = batch['command']  # List of strings
+            actions = batch['action'].to(device)  # [batch_size, 32]
+            
+            # Zero gradients
+            optimizer.zero_grad()
+            
+            # Forward pass
+            predicted_actions = model(images, commands)
+            
+            # Calculate loss
+            loss = criterion(predicted_actions, actions)
+            
+            # Backward pass
+            loss.backward()
+            
+            # Update weights
+            optimizer.step()
+            
+            epoch_loss += loss.item()
+            
+            # Print progress for first batch of each epoch
+            if batch_idx == 0:
+                print(f"Epoch {epoch+1}, Batch {batch_idx+1}, Loss: {loss.item():.6f}")
+        
+        # Calculate average epoch loss
+        avg_loss = epoch_loss / len(dataloader)
+        losses.append(avg_loss)
+        
+        print(f"Epoch {epoch+1} completed. Average Loss: {avg_loss:.6f}")
+    
+    # Plot training loss
+    plt.figure(figsize=(10, 5))
+    plt.plot(range(1, num_epochs + 1), losses)
+    plt.title('Training Loss Over Epochs')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.grid(True)
+    plt.show()
+    
+    # Save the trained model
+    torch.save(model.state_dict(), 'trained_vla_model.pth')
+    print("Model saved as 'trained_vla_model.pth'")
+    
+    return model
+
+def evaluate_model(model):
+    """Evaluate the trained model"""
+    model.eval()
+    
+    # Create a sample input
+    sample_image = torch.randn(1, 3, 224, 224)  # Single image
+    sample_command = ["pick up the red cup"]  # Single command
+    
+    # Get model prediction
+    with torch.no_grad():
+        predicted_action = model(sample_image, sample_command)
+    
+    print(f"Sample command: {sample_command[0]}")
+    print(f"Predicted action (first 5 joints): {predicted_action[0, :5]}")
+    print(f"Action range: [{predicted_action.min():.3f}, {predicted_action.max():.3f}]")
+    
+    # Check if action values are within expected range [-1, 1]
+    within_range = torch.all((predicted_action >= -1) & (predicted_action <= 1))
+    print(f"Actions within expected range [-1, 1]: {within_range.item()}")
+
+def main():
+    # Train the model
+    model = train_vla_model()
+    
+    # Evaluate the model
+    evaluate_model(model)
+
+if __name__ == "__main__":
+    main()
+```
+
+### Step 4: Robot Interface Integration
+Create an interface to connect the VLA model to a simulated robot:
+
+```python
+# vla_robot_interface.py
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import Image, JointState
+from std_msgs.msg import String
+from geometry_msgs.msg import Twist
+from cv_bridge import CvBridge
+import torch
+from transformers import AutoTokenizer
+import numpy as np
+from vla_model import VLAModel
+
+class VLARobotController(Node):
+    """ROS 2 node that uses VLA model for robot control"""
+    
+    def __init__(self):
+        super().__init__('vla_robot_controller')
+        
+        # Initialize CV bridge
+        self.bridge = CvBridge()
+        
+        # Initialize VLA model
+        self.model = VLAModel(num_robot_joints=32)
+        try:
+            # Load pre-trained model (if available)
+            self.model.load_state_dict(torch.load('trained_vla_model.pth'))
+            self.get_logger().info('Pre-trained VLA model loaded')
+        except FileNotFoundError:
+            self.get_logger().warn('No pre-trained model found, using random initialization')
+        
+        self.model.eval()
+        
+        # Initialize tokenizer for language processing
+        self.tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+        
+        # Initialize current state
+        self.current_image = None
+        self.command_queue = []
+        
+        # Create subscribers
+        self.image_sub = self.create_subscription(
+            Image,
+            '/camera/image_raw',
+            self.image_callback,
+            10
+        )
+        
+        self.command_sub = self.create_subscription(
+            String,
+            '/robot_command',
+            self.command_callback,
+            10
+        )
+        
+        # Create publishers
+        self.joint_pub = self.create_publisher(
+            JointState,
+            '/joint_commands',
+            10
+        )
+        
+        self.status_pub = self.create_publisher(
+            String,
+            '/robot_status',
+            10
+        )
+        
+        # Timer to process commands at regular intervals
+        self.timer = self.create_timer(0.5, self.process_commands)
+        
+        self.get_logger().info('VLA Robot Controller initialized')
+
+    def image_callback(self, msg):
+        """Process incoming camera images"""
+        try:
+            # Convert ROS Image to OpenCV image
+            cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+            
+            # Preprocess image for the model
+            self.current_image = self.preprocess_image(cv_image)
+            
+        except Exception as e:
+            self.get_logger().error(f'Error processing image: {str(e)}')
+
+    def command_callback(self, msg):
+        """Process incoming natural language commands"""
+        command = msg.data.strip()
+        if command:
+            self.command_queue.append(command)
+            self.get_logger().info(f'Command received: {command}')
+    
+    def preprocess_image(self, image):
+        """Preprocess image for the VLA model"""
+        # Resize to model input size (224x224)
+        resized = cv2.resize(image, (224, 224))
+        
+        # Convert BGR to RGB
+        rgb_image = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
+        
+        # Normalize and convert to tensor
+        normalized = rgb_image.astype(np.float32) / 255.0
+        tensor_image = torch.from_numpy(normalized).permute(2, 0, 1).unsqueeze(0)
+        
+        return tensor_image
+
+    def process_commands(self):
+        """Process queued commands using the VLA model"""
+        if not self.command_queue or self.current_image is None:
+            return
+        
+        # Get the next command
+        command = self.command_queue.pop(0)
+        
+        try:
+            # Run the VLA model
+            with torch.no_grad():
+                actions = self.model(self.current_image, [command])
+            
+            # Convert actions to joint commands
+            joint_commands = actions[0].cpu().numpy()  # Extract first (and only) sample
+            
+            # Publish the joint commands
+            self.publish_joint_commands(joint_commands)
+            
+            # Publish status
+            status_msg = String()
+            status_msg.data = f"Executed command: {command}"
+            self.status_pub.publish(status_msg)
+            
+            self.get_logger().info(f'Executed command: {command}')
+            
+        except Exception as e:
+            self.get_logger().error(f'Error processing command "{command}": {str(e)}')
+    
+    def publish_joint_commands(self, joint_values):
+        """Publish joint commands to the robot"""
+        msg = JointState()
+        msg.name = [f'joint_{i}' for i in range(len(joint_values))]  # Placeholder names
+        msg.position = joint_values.tolist()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = 'base_link'
+        
+        self.joint_pub.publish(msg)
+
+def main(args=None):
+    rclpy.init(args=args)
+    controller = VLARobotController()
+    
+    try:
+        rclpy.spin(controller)
+    except KeyboardInterrupt:
+        controller.get_logger().info('Shutting down VLA Robot Controller')
+    finally:
+        controller.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+## Results and Discussion
+1. How does the VLA model integrate vision and language understanding?
+2. What challenges arise when mapping language commands to specific robot actions?
+3. How could you improve the model's generalization to unseen commands?
+
+## Extensions
+- Implement attention visualization to see which parts of the image the model focuses on
+- Add reinforcement learning to refine actions based on success/failure feedback
+- Connect to a real robot or more complex simulation environment
+
+## Conclusion
+This lab demonstrated the implementation of a Vision-Language-Action model that can interpret natural language commands and generate appropriate robot actions based on visual perception. The integration of vision, language, and action in a unified model represents a significant step toward more natural human-robot interaction.

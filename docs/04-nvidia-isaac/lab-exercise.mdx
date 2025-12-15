@@ -1,0 +1,401 @@
+---
+title: "Lab Exercise: NVIDIA Isaac Platform"
+---
+
+# Lab Exercise: Implementing AI Models with NVIDIA Isaac Platform
+
+## Objective
+In this lab, you'll implement a basic computer vision model using the NVIDIA Isaac platform and deploy it to a simulated robot environment.
+
+## Prerequisites
+- NVIDIA Isaac Sim installed (Omniverse)
+- NVIDIA Isaac ROS packages
+- CUDA-compatible GPU with driver installed
+- Basic Python and PyTorch knowledge
+
+## Theory
+The NVIDIA Isaac platform combines simulation, AI frameworks, and robot hardware interfaces to enable development of AI-powered robots. This lab demonstrates the complete pipeline from AI model creation to deployment.
+
+## Implementation
+
+### Step 1: Set up Isaac ROS Environment
+First, let's set up a basic perception pipeline using Isaac ROS:
+
+```python
+# perception_pipeline.py
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import Image
+from std_msgs.msg import String
+import cv2
+from cv_bridge import CvBridge
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class SimpleObjectDetector(nn.Module):
+    def __init__(self, num_classes=5):
+        super(SimpleObjectDetector, self).__init__()
+        
+        # Simple CNN for object detection in a robotics context
+        self.conv1 = nn.Conv2d(3, 16, 3, padding=1)
+        self.conv2 = nn.Conv2d(16, 32, 3, padding=1)
+        self.conv3 = nn.Conv2d(32, 64, 3, padding=1)
+        
+        self.pool = nn.MaxPool2d(2, 2)
+        
+        # For classification after feature extraction
+        self.classifier = nn.Linear(64 * 12 * 12, num_classes)  # assuming 192x192 input -> 12x12 after pooling
+        
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = self.pool(F.relu(self.conv3(x)))
+        
+        x = x.view(-1, 64 * 12 * 12)
+        x = self.classifier(x)
+        return F.softmax(x, dim=1)
+
+class IsaacPerceptionNode(Node):
+    def __init__(self):
+        super().__init__('isaac_perception_node')
+        
+        # Create subscription to camera feed
+        self.subscription = self.create_subscription(
+            Image,
+            '/camera/image_raw',
+            self.image_callback,
+            10
+        )
+        
+        # Create publisher for detection results
+        self.detection_publisher = self.create_publisher(
+            String,
+            '/object_detections',
+            10
+        )
+        
+        # Initialize CV bridge
+        self.bridge = CvBridge()
+        
+        # Load or initialize model
+        self.model = SimpleObjectDetector(num_classes=5)
+        
+        # If we had a trained model, we would load it here
+        # self.model.load_state_dict(torch.load('trained_model.pth'))
+        self.model.eval()
+        
+        # Define class names for the 5 object classes
+        self.class_names = ['cup', 'ball', 'box', 'person', 'robot']
+        
+        self.get_logger().info('Isaac Perception Node initialized')
+
+    def image_callback(self, msg):
+        try:
+            # Convert ROS Image message to OpenCV image
+            cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+            
+            # Preprocess the image for the model
+            processed_image = self.preprocess_image(cv_image)
+            
+            # Run inference
+            with torch.no_grad():
+                output = self.model(processed_image)
+                probabilities = output[0]  # Get the first (and only) batch
+                
+                # Get the predicted class
+                predicted_class_idx = torch.argmax(probabilities).item()
+                confidence = probabilities[predicted_class_idx].item()
+                
+                # Prepare detection message
+                if confidence > 0.7:  # Only report confident detections
+                    detection_msg = f"Detected: {self.class_names[predicted_class_idx]} with confidence: {confidence:.2f}"
+                    self.detection_publisher.publish(String(data=detection_msg))
+                    self.get_logger().info(f'Published detection: {detection_msg}')
+                    
+        except Exception as e:
+            self.get_logger().error(f'Error processing image: {str(e)}')
+
+    def preprocess_image(self, image):
+        # Resize image to match model input (192x192)
+        resized = cv2.resize(image, (192, 192))
+        
+        # Convert BGR to RGB
+        rgb_image = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
+        
+        # Normalize and convert to tensor
+        normalized = rgb_image.astype(np.float32) / 255.0
+        tensor_image = torch.from_numpy(normalized).permute(2, 0, 1).unsqueeze(0)
+        
+        return tensor_image
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    perception_node = IsaacPerceptionNode()
+    
+    try:
+        rclpy.spin(perception_node)
+    except KeyboardInterrupt:
+        perception_node.get_logger().info('Shutting down Isaac Perception Node')
+    finally:
+        perception_node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+### Step 2: Isaac ROS Integration
+Create a launch file that demonstrates Isaac ROS capabilities:
+
+```xml
+<!-- launch/isaac_perception.launch -->
+<launch>
+  <!-- Launch the perception node -->
+  <node pkg="your_robot_package" exec="isaac_perception_node" name="isaac_perception" output="screen">
+    <!-- Parameters for the perception node -->
+    <param name="model_path" value="path/to/model.pth"/>
+    <param name="confidence_threshold" value="0.7"/>
+    <param name="input_topic" value="/camera/image_raw"/>
+    <param name="output_topic" value="/object_detections"/>
+  </node>
+
+  <!-- Launch Isaac ROS stereo processing node (if available) -->
+  <node pkg="isaac_ros_stereo_disparity" exec="stereo_disparity_node" name="stereo_disparity" output="screen">
+    <param name="left_topic" value="/camera/left/image_rect"/>
+    <param name="right_topic" value="/camera/right/image_rect"/>
+    <param name="disparity_topic" value="/disparity_map"/>
+  </node>
+
+  <!-- Launch Isaac ROS DNN image encoder -->
+  <node pkg="isaac_ros_dnn_image_encoder" exec="dnn_image_encoder" name="dnn_image_encoder" output="screen">
+    <param name="input_topic" value="/camera/image_raw"/>
+    <param name="output_topic" value="/encoded_image"/>
+  </node>
+</launch>
+```
+
+### Step 3: Implement Isaac Sim Integration
+Create a Python script to run in Isaac Sim environment:
+
+```python
+# isaac_sim_integration.py
+import omni
+from omni.isaac.core import World
+from omni.isaac.core.utils.viewports import create_viewport_window, destroy_viewport_window
+from omni.isaac.core.utils.stage import add_reference_to_stage, get_stage_units
+from omni.isaac.core.utils.prims import get_prim_at_path
+from omni.isaac.core.utils.nucleus import get_assets_root_path
+from omni.isaac.core.utils.carb import set_carb_setting
+from omni.isaac.core.utils import stage
+from omni.isaac.sensor import Camera
+from omni.isaac.core.materials import OmniPBR
+from pxr import Gf, UsdGeom
+import numpy as np
+import cv2
+import carb
+
+class IsaacSimRobot:
+    def __init__(self):
+        # Initialize the world
+        self.world = World(stage_units_in_meters=1.0)
+        self.viewport = None
+        
+        # Set up the scene
+        self.setup_scene()
+        
+        # Add a camera to the robot for perception
+        self.setup_camera()
+        
+        # Initialize AI model (conceptual - in real implementation, this would connect to your trained model)
+        self.ai_model = self.initialize_ai_model()
+        
+        print("Isaac Sim Robot initialized")
+    
+    def setup_scene(self):
+        """Setup the simulation environment with objects"""
+        # Add ground plane
+        stage.add_ground_plane("/World/defaultGroundPlane", 2000.0, "X", "Z", [0, 0, 0], [0.2, 0.2, 0.2, 1.0])
+        
+        # Add objects for the robot to detect
+        self.add_object_to_scene("/World/Cup", [0.5, 0.0, 0.2], [0.05, 0.05, 0.1])
+        self.add_object_to_scene("/World/Ball", [-0.3, 0.4, 0.15], [0.1, 0.1, 0.1])
+        self.add_object_to_scene("/World/Box", [0.2, -0.3, 0.1], [0.2, 0.2, 0.2])
+        
+    def add_object_to_scene(self, prim_path, position, size):
+        """Add a primitive object to the scene"""
+        # Create a cube
+        cube = stage.add_cube(prim_path, position=position, size=size[0])
+        
+        # Apply different materials based on the object type
+        material = OmniPBR(
+            prim_path=f"{prim_path}/material",
+            diffuse_color=(np.random.random(), np.random.random(), np.random.random())
+        )
+        
+        return cube
+    
+    def setup_camera(self):
+        """Setup the robot's camera for perception"""
+        # Add a camera prim to the stage
+        self.camera = Camera(
+            prim_path="/World/Robot/Camera",
+            position=[0.0, 0.0, 0.5],
+            frequency=20
+        )
+        
+        # Initialize the camera
+        self.camera.initialize()
+        
+        print("Camera initialized at:", self.camera.get_world_pose())
+        
+    def initialize_ai_model(self):
+        """Initialize or load the AI model for perception"""
+        # In a real implementation, this would load a trained model
+        print("AI model initialized")
+        return {"status": "loaded", "model_type": "simple_detector"}
+        
+    def run_perception_pipeline(self):
+        """Run the perception pipeline in simulation"""
+        # Get camera data
+        camera_data = self.camera.get_render_product()
+        
+        # In a real implementation, this would run inference on the captured image
+        print("Running perception pipeline...")
+        
+        # Simulate AI model output
+        detected_objects = [
+            {"type": "cup", "confidence": 0.92, "position": [0.5, 0.0, 0.2]},
+            {"type": "ball", "confidence": 0.85, "position": [-0.3, 0.4, 0.15]}
+        ]
+        
+        print(f"Detected objects: {detected_objects}")
+        return detected_objects
+        
+    def execute_navigation(self, target_position):
+        """Navigate the robot toward the target position"""
+        print(f"Navigating to target position: {target_position}")
+        # In a real implementation, this would use navigation algorithms
+        # to move the simulated robot
+        
+        # For this lab, we'll just print the movement
+        current_pos = [0, 0, 0]  # Starting position
+        print(f"Moving from {current_pos} to {target_position}")
+        
+    def run(self):
+        """Main execution loop"""
+        self.world.reset()
+        
+        for i in range(100):  # Run for 100 steps
+            # Step the physics
+            self.world.step(render=True)
+            
+            if i % 20 == 0:  # Run perception every 20 steps
+                detections = self.run_perception_pipeline()
+                
+                # If we detected a cup, navigate toward it
+                for obj in detections:
+                    if obj["type"] == "cup" and obj["confidence"] > 0.9:
+                        self.execute_navigation(obj["position"])
+                        break
+
+# Main execution
+def main():
+    robot = IsaacSimRobot()
+    robot.run()
+    print("Simulation completed")
+
+if __name__ == "__main__":
+    main()
+```
+
+### Step 4: TensorRT Optimization Example
+Demonstrate model optimization for deployment on Jetson:
+
+```python
+# tensorrt_optimizer.py
+import torch
+import torch_tensorrt
+
+def optimize_model_for_jetson(model, example_input):
+    """
+    Optimize a PyTorch model for deployment on Jetson using TensorRT
+    """
+    # Convert the model to TorchScript
+    traced_model = torch.jit.trace(model, example_input)
+    
+    # Compile with Torch-TensorRT
+    # This enables optimizations for NVIDIA hardware including Jetson
+    optimized_model = torch_tensorrt.compile(
+        traced_model,
+        inputs=[example_input],
+        enabled_precisions={torch.float, torch.half},  # Use FP32 and FP16
+        workspace_size=1 << 20,  # 1MB workspace size
+        max_batch_size=1  # Batch size for inference
+    )
+    
+    return optimized_model
+
+def quantize_model(model, calib_data_loader):
+    """
+    Apply INT8 quantization to reduce model size and improve inference speed
+    """
+    import torch.quantization as quant
+    
+    # Set the model to evaluation mode
+    model.eval()
+    
+    # Specify quantization configuration
+    model.qconfig = quant.get_default_qconfig('tensorrt')
+    
+    # Fuse conv, relu, and add modules for optimization
+    model_fp32 = quant.fuse_modules(model, [['conv1', 'bn1', 'relu1']])
+    
+    # Prepare the model for quantization
+    model_prepared = quant.prepare(model_fp32)
+    
+    # Calibrate the model with sample data
+    with torch.no_grad():
+        for data, _ in calib_data_loader:
+            model_prepared(data)
+    
+    # Convert to quantized model
+    model_quantized = quant.convert(model_prepared)
+    
+    return model_quantized
+
+# Example usage
+def main():
+    # Create a sample model
+    model = SimpleObjectDetector(num_classes=5)
+    
+    # Create example input for tracing
+    example_input = torch.randn(1, 3, 192, 192)
+    
+    # Optimize for TensorRT
+    optimized_model = optimize_model_for_jetson(model, example_input)
+    
+    # Save the optimized model
+    torch.jit.save(optimized_model, "optimized_model.ts")
+    
+    print("Model optimized for Jetson deployment")
+
+if __name__ == "__main__":
+    main()
+```
+
+## Results and Discussion
+1. How does the Isaac platform integration streamline the development process?
+2. What are the advantages of using TensorRT for model optimization?
+3. How would you adapt this pipeline for a real humanoid robot?
+
+## Extensions
+- Integrate with Isaac ROS navigation packages
+- Implement a reinforcement learning training loop in Isaac Sim
+- Add more complex perception tasks like segmentation or pose estimation
+
+## Conclusion
+This lab demonstrated the complete pipeline from model creation to deployment using the NVIDIA Isaac platform. The integration of simulation, AI frameworks, and robot interfaces in the Isaac platform enables efficient development and deployment of AI-powered robotic systems.

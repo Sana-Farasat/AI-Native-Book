@@ -1,0 +1,104 @@
+# API Contract: RAG Chatbot
+
+## Overview
+This document describes the API contract for the Retrieval-Augmented Generation (RAG) chatbot that answers questions based on the textbook content.
+
+## Base URL
+```
+https://your-textbook-domain.com/api
+```
+
+## Authentication
+All requests to the chatbot API must include the following header:
+```
+Authorization: Bearer <GEMINI_API_KEY>
+```
+
+## Endpoints
+
+### POST /chatbot/query
+Submit a question to the RAG chatbot and receive an answer based on textbook content.
+
+#### Request
+```json
+{
+  "question": "string (required)",
+  "context": "string (optional)",
+  "chapterId": "string (optional)"
+}
+```
+
+##### Example Request
+```json
+{
+  "question": "Explain the ROS 2 architecture and its advantages over ROS 1"
+}
+```
+
+#### Response
+```json
+{
+  "answer": "string (the answer to the question)",
+  "confidence": "number (0-1 confidence score)",
+  "sources": [
+    {
+      "title": "string",
+      "url": "string",
+      "chapter": "string"
+    }
+  ],
+  "timestamp": "string (ISO 8601 format)"
+}
+```
+
+##### Example Response
+```json
+{
+  "answer": "ROS 2 architecture uses a DDS (Data Distribution Service) based communication layer which provides better real-time performance, reliability, and scalability compared to ROS 1's custom TCP/UDP implementation...",
+  "confidence": 0.85,
+  "sources": [
+    {
+      "title": "ROS 2 Design",
+      "url": "/docs/ros2-deep-dive",
+      "chapter": "The Robotic Nervous System – ROS 2 Deep Dive"
+    }
+  ],
+  "timestamp": "2025-12-11T10:30:00Z"
+}
+```
+
+#### Error Responses
+- `400 Bad Request`: Missing required fields or invalid input
+- `401 Unauthorized`: Invalid or missing API key
+- `429 Too Many Requests`: Rate limit exceeded
+- `500 Internal Server Error`: Unexpected server error
+
+### GET /chatbot/health
+Check the health status of the chatbot service.
+
+#### Response
+```json
+{
+  "status": "string (healthy|unhealthy)",
+  "timestamp": "string (ISO 8601 format)"
+}
+```
+
+##### Example Response
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-12-11T10:30:00Z"
+}
+```
+
+## Rate Limits
+- 60 requests per minute per IP
+- 1000 requests per hour per IP
+
+## Content Retrieval Process
+1. The API receives a question from the user
+2. The system retrieves relevant textbook content based on the question
+3. The content is passed to the Gemini 1.5 Flash API with the question
+4. The response is formatted and returned to the user
+5. Relevant sources from the textbook are included in the response

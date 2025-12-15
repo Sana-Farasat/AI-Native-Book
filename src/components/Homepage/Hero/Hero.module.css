@@ -1,0 +1,104 @@
+/**
+ * Custom CSS module for the hero section with glowing effects
+ */
+.hero {
+  background: linear-gradient(135deg, #553C9A 0%, #6B46C1 100%);
+  color: white;
+  padding: 4rem 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* background: url('./img/hero-bg.jpg') no-repeat center center; */
+  background-size: cover;
+  opacity: 0.2;
+  z-index: 1;
+}
+
+.heroInner {
+  position: relative;
+  z-index: 2;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.heroTitle {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.heroSubtitle {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.heroTagline {
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.buttonsContainer {
+  margin-top: 2rem;
+}
+
+.heroButton {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  border: 2px solid white !important;
+  color: white !important;
+  padding: 1rem 2rem !important;
+  font-size: 1.2rem !important;
+  border-radius: 50px !important;
+  transition: all 0.3s ease !important;
+  text-shadow: none !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.heroButton:hover {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3) !important;
+}
+
+.glowingButton {
+  animation: glow 2s infinite alternate;
+}
+
+@keyframes glow {
+  from {
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  }
+  to {
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 30px rgba(107, 70, 193, 0.6);
+  }
+}
+
+@media (max-width: 768px) {
+  .heroTitle {
+    font-size: 2rem;
+  }
+  
+  .heroSubtitle {
+    font-size: 1.2rem;
+  }
+  
+  .heroButton {
+    width: 100%;
+    max-width: 300px;
+  }
+}

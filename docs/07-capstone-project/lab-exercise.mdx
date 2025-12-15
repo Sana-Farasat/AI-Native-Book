@@ -1,0 +1,986 @@
+---
+title: "Lab Exercise: Capstone Project Implementation"
+---
+
+# Lab Exercise: Capstone Project Implementation
+
+## Objective
+In this capstone lab, you'll integrate all concepts learned throughout the textbook to implement a complete autonomous conversational humanoid robot system. This includes combining ROS 2 control, perception, VLA models, and ethical considerations.
+
+## Prerequisites
+- Complete understanding of all previous chapters
+- Ubuntu 20.04/22.04 with ROS 2 Humble Hawksbill
+- Gazebo or Isaac Sim
+- NVIDIA GPU for AI processing (if using Isaac platform)
+- Basic knowledge of Python, C++, and PyTorch
+
+## Theory
+The capstone project synthesizes all textbook concepts into a comprehensive autonomous conversational humanoid robot. The system integrates:
+- Natural language understanding
+- Visual perception
+- Motion control
+- Safety and ethics
+- Human-robot interaction
+
+## Implementation
+
+### Step 1: System Architecture Overview
+Create the main system orchestrator that connects all components:
+
+```python
+# capstone_system.py
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import Image, JointState, Imu
+from std_msgs.msg import String
+from geometry_msgs.msg import Twist
+from cv_bridge import CvBridge
+import numpy as np
+import threading
+import queue
+from collections import deque
+import time
+import json
+
+class CapstoneSystem(Node):
+    """
+    Main orchestrator for the autonomous conversational humanoid robot.
+    Integrates all subsystems: perception, reasoning, control, safety, and ethics.
+    """
+    
+    def __init__(self):
+        super().__init__('capstone_system')
+        
+        # Initialize CV bridge
+        self.bridge = CvBridge()
+        
+        # Queues for inter-thread communication
+        self.speech_queue = queue.Queue()
+        self.vision_queue = queue.Queue()
+        self.command_queue = queue.Queue()
+        
+        # System state
+        self.current_image = None
+        self.current_imu = None
+        self.robot_state = {
+            'position': [0.0, 0.0, 0.0],
+            'orientation': [0.0, 0.0, 0.0, 1.0],  # Quaternion
+            'joint_angles': [],
+            'battery_level': 100.0,
+            'safety_status': 'normal'
+        }
+        self.system_status = {
+            'operational': True,
+            'current_task': 'idle',
+            'last_interaction': time.time()
+        }
+        
+        # Initialize all subsystems
+        self.initialize_perception()
+        self.initialize_control()
+        self.initialize_nlp()
+        self.initialize_safety()
+        self.initialize_ethics()
+        
+        # Create subscribers
+        self.image_sub = self.create_subscription(
+            Image, '/camera/image_raw', self.image_callback, 10
+        )
+        self.imu_sub = self.create_subscription(
+            Imu, '/imu/data', self.imu_callback, 10
+        )
+        self.joint_sub = self.create_subscription(
+            JointState, '/joint_states', self.joint_state_callback, 10
+        )
+        self.speech_sub = self.create_subscription(
+            String, '/speech_recognition', self.speech_callback, 10
+        )
+        
+        # Create publishers
+        self.speech_pub = self.create_publisher(String, '/text_to_speech', 10)
+        self.joint_cmd_pub = self.create_publisher(JointState, '/joint_commands', 10)
+        self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.status_pub = self.create_publisher(String, '/system_status', 10)
+        
+        # Timer for main system loop
+        self.system_timer = self.create_timer(0.1, self.system_loop)
+        
+        # Initialize threads for parallel processing
+        self.vision_thread = threading.Thread(target=self.vision_processing_loop)
+        self.speech_thread = threading.Thread(target=self.speech_processing_loop)
+        
+        # Start threads
+        self.vision_thread.start()
+        self.speech_thread.start()
+        
+        self.get_logger().info("Capstone System initialized and running")
+
+    def initialize_perception(self):
+        """Initialize perception subsystem"""
+        self.get_logger().info("Initializing perception subsystem")
+        # In a real implementation, this would initialize computer vision models
+        pass
+
+    def initialize_control(self):
+        """Initialize control subsystem"""
+        self.get_logger().info("Initializing control subsystem")
+        # In a real implementation, this would initialize motion control algorithms
+        pass
+
+    def initialize_nlp(self):
+        """Initialize natural language processing subsystem"""
+        self.get_logger().info("Initializing NLP subsystem")
+        # In a real implementation, this would initialize language models
+        pass
+
+    def initialize_safety(self):
+        """Initialize safety subsystem"""
+        self.get_logger().info("Initializing safety subsystem")
+        # Initialize safety parameters and thresholds
+        self.safety_params = {
+            'max_velocity': 0.5,
+            'max_torque': 10.0,
+            'obstacle_distance': 0.3,
+            'temperature_threshold': 60.0
+        }
+        
+    def initialize_ethics(self):
+        """Initialize ethical decision-making subsystem"""
+        self.get_logger().info("Initializing ethics subsystem")
+        # Initialize ethical rules and guidelines
+        self.ethical_rules = [
+            "Do not harm humans",
+            "Respect human autonomy",
+            "Act transparently",
+            "Maintain human privacy",
+            "Be accountable for actions"
+        ]
+
+    def image_callback(self, msg):
+        """Process incoming camera images"""
+        try:
+            cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+            self.current_image = cv_image
+            # Add to vision processing queue
+            self.vision_queue.put(('image', cv_image, time.time()))
+        except Exception as e:
+            self.get_logger().error(f'Error processing image: {str(e)}')
+
+    def imu_callback(self, msg):
+        """Process IMU data for balance and orientation"""
+        self.current_imu = {
+            'orientation': [msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w],
+            'angular_velocity': [msg.angular_velocity.x, msg.angular_velocity.y, msg.angular_velocity.z],
+            'linear_acceleration': [msg.linear_acceleration.x, msg.linear_acceleration.y, msg.linear_acceleration.z]
+        }
+
+    def joint_state_callback(self, msg):
+        """Update joint state information"""
+        self.robot_state['joint_angles'] = list(msg.position)
+
+    def speech_callback(self, msg):
+        """Process incoming speech commands"""
+        self.speech_queue.put(msg.data)
+
+    def vision_processing_loop(self):
+        """Background thread for vision processing"""
+        while rclpy.ok() and self.system_status['operational']:
+            try:
+                if not self.vision_queue.empty():
+                    item_type, data, timestamp = self.vision_queue.get(timeout=0.1)
+                    
+                    # In a real implementation, run computer vision algorithms here
+                    # For simulation, we'll just add some delay
+                    time.sleep(0.05)
+                    
+                    # Example: Detect objects in the scene
+                    if item_type == 'image':
+                        # Simulate object detection
+                        detected_objects = self.simulate_object_detection(data)
+                        
+                        if detected_objects:
+                            # Publish detection results
+                            detection_msg = String()
+                            detection_msg.data = json.dumps({
+                                'timestamp': timestamp,
+                                'objects': detected_objects
+                            })
+                            # We'd publish to a detection topic, but using status for this example
+                            self.status_pub.publish(detection_msg)
+                            
+                else:
+                    time.sleep(0.01)  # Small delay to prevent busy waiting
+                    
+            except queue.Empty:
+                continue
+            except Exception as e:
+                self.get_logger().error(f'Vision processing error: {str(e)}')
+
+    def speech_processing_loop(self):
+        """Background thread for speech processing"""
+        while rclpy.ok() and self.system_status['operational']:
+            try:
+                command = self.speech_queue.get(timeout=0.1)
+                
+                # In a real implementation, process natural language here
+                # For simulation, we'll parse simple commands
+                parsed_command = self.parse_command(command)
+                
+                if parsed_command:
+                    # Add to command queue for execution
+                    self.command_queue.put(parsed_command)
+                    
+                else:
+                    # Request clarification
+                    clarification = String()
+                    clarification.data = "I didn't understand that. Could you please repeat or rephrase?"
+                    self.speech_pub.publish(clarification)
+                    
+            except queue.Empty:
+                continue
+            except Exception as e:
+                self.get_logger().error(f'Speech processing error: {str(e)}')
+
+    def parse_command(self, command):
+        """Parse natural language command into robot action"""
+        command = command.lower()
+        
+        # Simple command parsing (in a real system, use NLP models)
+        if 'hello' in command or 'hi' in command:
+            return {'action': 'greet', 'target': 'user'}
+        elif 'move forward' in command or 'go forward' in command:
+            return {'action': 'move', 'direction': 'forward', 'distance': 1.0}
+        elif 'turn left' in command:
+            return {'action': 'turn', 'direction': 'left', 'angle': 90}
+        elif 'turn right' in command:
+            return {'action': 'turn', 'direction': 'right', 'angle': 90}
+        elif 'stop' in command or 'halt' in command:
+            return {'action': 'stop'}
+        elif 'wave' in command:
+            return {'action': 'gesture', 'type': 'wave'}
+        elif 'dance' in command:
+            return {'action': 'gesture', 'type': 'dance'}
+        elif 'show me' in command or 'find' in command:
+            # Extract object to find from command
+            obj = self.extract_object_from_command(command)
+            if obj:
+                return {'action': 'find_object', 'target': obj}
+        
+        return None
+
+    def extract_object_from_command(self, command):
+        """Extract object name from command"""
+        # Simple extraction (in a real system, use NLP)
+        if 'red cup' in command:
+            return 'red cup'
+        elif 'blue ball' in command:
+            return 'blue ball'
+        elif 'green box' in command:
+            return 'green box'
+        elif 'person' in command:
+            return 'person'
+        return None
+
+    def simulate_object_detection(self, image):
+        """Simulate object detection in the image"""
+        # In a real implementation, run a detection model
+        # For simulation, return some dummy objects
+        import random
+        
+        if random.random() > 0.7:  # 30% chance of detecting something
+            return [
+                {
+                    'class': 'person',
+                    'confidence': 0.85,
+                    'bbox': [100, 100, 200, 300],  # [x, y, width, height]
+                    'center': [150, 200]
+                }
+            ]
+        return []
+
+    def execute_command(self, command):
+        """Execute parsed command on the robot"""
+        action = command.get('action')
+        
+        if action == 'greet':
+            # Simple greeting - just acknowledge
+            response = String()
+            response.data = "Hello there! How can I assist you today?"
+            self.speech_pub.publish(response)
+            
+        elif action == 'move':
+            direction = command.get('direction')
+            distance = command.get('distance', 1.0)
+            
+            # Publish velocity command
+            cmd_vel = Twist()
+            if direction == 'forward':
+                cmd_vel.linear.x = self.safety_params['max_velocity']
+            elif direction == 'backward':
+                cmd_vel.linear.x = -self.safety_params['max_velocity']
+                
+            self.cmd_vel_pub.publish(cmd_vel)
+            
+        elif action == 'turn':
+            direction = command.get('direction')
+            angle = command.get('angle', 90)
+            
+            # Publish angular velocity command
+            cmd_vel = Twist()
+            if direction == 'left':
+                cmd_vel.angular.z = 0.5  # rad/s
+            elif direction == 'right':
+                cmd_vel.angular.z = -0.5  # rad/s
+                
+            self.cmd_vel_pub.publish(cmd_vel)
+            
+        elif action == 'stop':
+            cmd_vel = Twist()
+            cmd_vel.linear.x = 0.0
+            cmd_vel.angular.z = 0.0
+            self.cmd_vel_pub.publish(cmd_vel)
+            
+        elif action == 'gesture':
+            gesture_type = command.get('type')
+            self.execute_gesture(gesture_type)
+            
+        elif action == 'find_object':
+            target = command.get('target')
+            self.find_object(target)
+
+    def execute_gesture(self, gesture_type):
+        """Execute a predefined gesture"""
+        # In a real implementation, send joint commands for gestures
+        if gesture_type == 'wave':
+            # Simulate wave gesture with arm movement
+            joint_cmd = JointState()
+            joint_cmd.name = ['right_shoulder_joint', 'right_elbow_joint', 'right_wrist_joint']
+            joint_cmd.position = [0.5, -0.5, 0.2]  # Example positions for waving
+            joint_cmd.header.stamp = self.get_clock().now().to_msg()
+            self.joint_cmd_pub.publish(joint_cmd)
+            
+        elif gesture_type == 'dance':
+            # Simulate dance movement
+            joint_cmd = JointState()
+            joint_cmd.name = ['left_hip_joint', 'right_hip_joint', 'left_knee_joint', 'right_knee_joint']
+            joint_cmd.position = [0.2, -0.2, 0.1, -0.1]  # Example dance positions
+            joint_cmd.header.stamp = self.get_clock().now().to_msg()
+            self.joint_cmd_pub.publish(joint_cmd)
+
+    def find_object(self, target_object):
+        """Look for a specific object in the environment"""
+        # In a real implementation, this would combine perception and navigation
+        response = String()
+        response.data = f"I'm looking for the {target_object}. Please wait."
+        self.speech_pub.publish(response)
+        
+        # Publish a query for object detection
+        query_msg = String()
+        query_msg.data = f"search_for_{target_object}"
+        # In a real system, this would go to object detection system
+        
+    def system_loop(self):
+        """Main system control loop"""
+        # Process any pending commands
+        while not self.command_queue.empty():
+            try:
+                command = self.command_queue.get_nowait()
+                
+                # Check ethics before executing command
+                if self.check_ethical_compliance(command):
+                    self.execute_command(command)
+                    self.system_status['last_interaction'] = time.time()
+                else:
+                    # Refuse unethical command
+                    response = String()
+                    response.data = "I cannot perform that action as it violates ethical guidelines."
+                    self.speech_pub.publish(response)
+                    
+            except queue.Empty:
+                break
+        
+        # Check safety status
+        safety_ok = self.check_safety_status()
+        if not safety_ok:
+            self.emergency_stop()
+            
+        # Update system status
+        status_msg = String()
+        status_msg.data = json.dumps(self.system_status)
+        self.status_pub.publish(status_msg)
+
+    def check_ethical_compliance(self, command):
+        """Check if command complies with ethical guidelines"""
+        # Simple check - in a real implementation, this would be more sophisticated
+        action = command.get('action', '')
+        
+        # For this example, all implemented actions are considered ethical
+        # In practice, you'd check against more complex ethical rules
+        return True
+
+    def check_safety_status(self):
+        """Check if robot is in safe operating conditions"""
+        # Check if robot is in a safe state
+        # This is a simplified check - in reality, monitor many parameters
+        if self.current_imu:
+            # Check if robot is tilted beyond safe angle (simplified check)
+            orientation = self.current_imu['orientation']
+            # Convert quaternion to roll/pitch (simplified)
+            # In a real implementation, you'd have more robust checks
+            pass
+            
+        return True  # Simplified - assume always safe
+
+    def emergency_stop(self):
+        """Execute emergency stop procedure"""
+        self.get_logger().warn("Safety violation detected! Executing emergency stop!")
+        
+        # Stop all robot motion
+        cmd_vel = Twist()
+        cmd_vel.linear.x = 0.0
+        cmd_vel.angular.z = 0.0
+        self.cmd_vel_pub.publish(cmd_vel)
+        
+        # Set operational status to False
+        self.system_status['operational'] = False
+        
+        # Publish emergency status
+        status_msg = String()
+        status_msg.data = "EMERGENCY_STOP"
+        self.status_pub.publish(status_msg)
+
+def main(args=None):
+    rclpy.init(args=args)
+    capstone_system = CapstoneSystem()
+    
+    try:
+        rclpy.spin(capstone_system)
+    except KeyboardInterrupt:
+        capstone_system.get_logger().info('Shutting down Capstone System')
+    finally:
+        # Properly shut down all threads
+        capstone_system.system_status['operational'] = False
+        if capstone_system.vision_thread.is_alive():
+            capstone_system.vision_thread.join(timeout=2.0)
+        if capstone_system.speech_thread.is_alive():
+            capstone_system.speech_thread.join(timeout=2.0)
+            
+        capstone_system.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+### Step 2: Create a Dialogue Management System
+Implement a module to handle natural conversation flows:
+
+```python
+# dialogue_manager.py
+import json
+import random
+import re
+from datetime import datetime
+
+class DialogueManager:
+    """Manages natural conversation flows for the humanoid robot"""
+    
+    def __init__(self):
+        # Define conversation patterns
+        self.patterns = {
+            'greeting': [
+                r'hello|hi|hey|good morning|good afternoon|good evening',
+                self.respond_to_greeting
+            ],
+            'farewell': [
+                r'goodbye|bye|see you|farewell|talk to you later',
+                self.respond_to_farewell
+            ],
+            'time_query': [
+                r'what time is it|what is the time|tell me the time|time please',
+                self.respond_to_time_query
+            ],
+            'weather_query': [
+                r'what is the weather|how is the weather|weather today',
+                self.respond_to_weather_query
+            ],
+            'robot_name': [
+                r'what is your name|who are you|what do I call you',
+                self.respond_to_robot_name
+            ],
+            'capabilities': [
+                r'what can you do|what are you capable of|what can you help with',
+                self.respond_to_capabilities
+            ],
+            'help': [
+                r'help|can you help|need help|assist me',
+                self.respond_to_help
+            ]
+        }
+        
+        # Define responses
+        self.responses = {
+            'greeting': [
+                "Hello! It's great to meet you.",
+                "Hi there! How can I assist you today?",
+                "Greetings! I'm here to help.",
+                "Hello! What can I do for you?"
+            ],
+            'farewell': [
+                "Goodbye! Have a great day!",
+                "Bye! See you later!",
+                "Farewell! I hope our interaction was helpful!",
+                "Take care! Feel free to come back anytime."
+            ],
+            'time_response': [
+                "The current time is {time}.",
+                "It's {time} right now.",
+                "Time is {time} at the moment."
+            ],
+            'weather_response': [
+                "I'm sorry, I don't have access to real weather data, but I hope it's nice where you are!",
+                "I can't check the weather, but I hope it's pleasant for you!",
+                "I don't have weather data, but I hope you have a great day!"
+            ],
+            'robot_name_response': [
+                "I'm your Physical AI & Humanoid Robotics assistant. You can call me by any name you'd like!",
+                "I'm an autonomous conversational humanoid robot designed to assist with various tasks.",
+                "I'm your AI assistant, designed to interact and help with humanoid robotics tasks."
+            ],
+            'capabilities_response': [
+                "I can engage in conversation, recognize objects, perform simple gestures, and navigate in my environment.",
+                "I'm capable of understanding natural language, perceiving my environment, and executing basic robot actions.",
+                "I can talk with you, identify objects around me, move and gesture, and answer questions about humanoid robotics."
+            ],
+            'help_response': [
+                "I'm here to help! You can ask me questions, request simple tasks, or just chat.",
+                "Sure! I can assist with questions about humanoid robotics, perform basic actions, or just have a conversation.",
+                "I'm ready to assist! What would you like help with?"
+            ]
+        }
+        
+        # Context for conversation memory
+        self.conversation_context = {
+            'last_interaction': None,
+            'user_name': None,
+            'conversation_history': []
+        }
+
+    def process_input(self, user_input):
+        """Process user input and generate appropriate response"""
+        user_input = user_input.lower().strip()
+        
+        # Add to conversation history
+        self.conversation_context['conversation_history'].append({
+            'type': 'user',
+            'text': user_input,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+        # Check for matches in patterns
+        for intent, (pattern, response_func) in self.patterns.items():
+            if re.search(pattern, user_input):
+                response = response_func(user_input)
+                self.conversation_context['last_interaction'] = datetime.now()
+                
+                # Add to conversation history
+                self.conversation_context['conversation_history'].append({
+                    'type': 'system',
+                    'text': response,
+                    'timestamp': datetime.now().isoformat()
+                })
+                
+                return response
+        
+        # If no pattern matched, use a default response
+        response = self.respond_to_default(user_input)
+        self.conversation_context['last_interaction'] = datetime.now()
+        
+        # Add to conversation history
+        self.conversation_context['conversation_history'].append({
+            'type': 'system',
+            'text': response,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+        return response
+
+    def respond_to_greeting(self, user_input):
+        """Respond to user greetings"""
+        return random.choice(self.responses['greeting'])
+
+    def respond_to_farewell(self, user_input):
+        """Respond to user farewells"""
+        return random.choice(self.responses['farewell'])
+
+    def respond_to_time_query(self, user_input):
+        """Respond to time queries"""
+        current_time = datetime.now().strftime("%I:%M %p")
+        response_template = random.choice(self.responses['time_response'])
+        return response_template.format(time=current_time)
+
+    def respond_to_weather_query(self, user_input):
+        """Respond to weather queries"""
+        return random.choice(self.responses['weather_response'])
+
+    def respond_to_robot_name(self, user_input):
+        """Respond to questions about robot identity"""
+        return random.choice(self.responses['robot_name_response'])
+
+    def respond_to_capabilities(self, user_input):
+        """Respond to questions about capabilities"""
+        return random.choice(self.responses['capabilities_response'])
+
+    def respond_to_help(self, user_input):
+        """Respond to help requests"""
+        return random.choice(self.responses['help_response'])
+
+    def respond_to_default(self, user_input):
+        """Default response for unmatched inputs"""
+        # For complex questions, suggest specific topics
+        if any(word in user_input for word in ['robotics', 'ai', 'humanoid', 'simulation']):
+            return ("That's an interesting topic! I can share information about humanoid robotics, AI, and related subjects. "
+                   "Would you like to know more about a specific aspect of physical AI?")
+        
+        # General default response
+        return ("I'm not sure I fully understand. I can talk about humanoid robotics, AI, and related topics. "
+               "You can also ask me to perform simple tasks like moving or gesturing.")
+
+    def set_user_name(self, name):
+        """Set the user's name for personalized interaction"""
+        self.conversation_context['user_name'] = name
+
+    def get_conversation_context(self):
+        """Get the current conversation context"""
+        return self.conversation_context
+
+# Example usage
+def main():
+    dm = DialogueManager()
+    
+    print("Dialogue Manager Demo")
+    print("Type 'quit' to exit")
+    
+    while True:
+        user_input = input("User: ")
+        if user_input.lower() in ['quit', 'exit', 'bye']:
+            break
+            
+        response = dm.process_input(user_input)
+        print(f"Robot: {response}")
+        print()
+
+if __name__ == '__main__':
+    main()
+```
+
+### Step 3: Implement the Ethics Module
+Create a module that ensures ethical decision-making:
+
+```python
+# ethics_module.py
+import json
+import logging
+from datetime import datetime
+
+class EthicsModule:
+    """Responsible AI module that ensures ethical decision-making"""
+    
+    def __init__(self):
+        # Core ethical principles
+        self.ethical_principles = [
+            {
+                'name': 'Beneficence',
+                'description': 'Act in ways that promote well-being',
+                'rules': [
+                    {'condition': 'harm_to_human', 'action': 'prohibited'},
+                    {'condition': 'promotes_wellbeing', 'action': 'encouraged'}
+                ]
+            },
+            {
+                'name': 'Non-maleficence', 
+                'description': 'Do no harm',
+                'rules': [
+                    {'condition': 'physical_harm', 'action': 'prohibited'},
+                    {'condition': 'psychological_harm', 'action': 'prohibited'},
+                    {'condition': 'property_damage', 'action': 'avoid_if_possible'}
+                ]
+            },
+            {
+                'name': 'Autonomy',
+                'description': 'Respect human autonomy and decision-making',
+                'rules': [
+                    {'condition': 'disregards_human_choice', 'action': 'prohibited'},
+                    {'condition': 'infringes_on_privacy', 'action': 'prohibited'}
+                ]
+            },
+            {
+                'name': 'Justice',
+                'description': 'Ensure fair and equitable treatment',
+                'rules': [
+                    {'condition': 'discriminates', 'action': 'prohibited'},
+                    {'condition': 'unequal_access', 'action': 'avoid_if_possible'}
+                ]
+            },
+            {
+                'name': 'Transparency',
+                'description': 'Be clear about capabilities and limitations',
+                'rules': [
+                    {'condition': 'misleading_information', 'action': 'prohibited'},
+                    {'condition': 'deceptive_behavior', 'action': 'prohibited'}
+                ]
+            }
+        ]
+        
+        # Log for accountability
+        self.decision_log = []
+        self.logger = logging.getLogger('ethics_module')
+        
+    def evaluate_action(self, action, context=None):
+        """Evaluate if an action is ethically acceptable"""
+        evaluation_result = {
+            'action': action,
+            'ethical': True,
+            'concerns': [],
+            'recommendations': [],
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        # Check against ethical principles
+        for principle in self.ethical_principles:
+            for rule in principle['rules']:
+                condition_result = self.check_condition(action, rule['condition'], context)
+                
+                if condition_result:
+                    if rule['action'] == 'prohibited':
+                        evaluation_result['ethical'] = False
+                        evaluation_result['concerns'].append({
+                            'principle': principle['name'],
+                            'rule': rule['condition'],
+                            'severity': 'high'
+                        })
+                    elif rule['action'] == 'avoid_if_possible':
+                        evaluation_result['concerns'].append({
+                            'principle': principle['name'],
+                            'rule': rule['condition'],
+                            'severity': 'medium'
+                        })
+                        evaluation_result['recommendations'].append(
+                            f"Consider alternative that doesn't {rule['condition']}"
+                        )
+        
+        # Log the decision for accountability
+        self.log_decision(evaluation_result)
+        
+        return evaluation_result
+    
+    def check_condition(self, action, condition, context):
+        """Check if an action satisfies a condition"""
+        # This is a simplified check - in a real implementation, this would be more sophisticated
+        action_str = json.dumps(action, default=str).lower()
+        context_str = json.dumps(context, default=str).lower() if context else ""
+        
+        # Check for various harmful conditions
+        if condition == 'harm_to_human':
+            return any(harm_word in action_str for harm_word in ['hit', 'hurt', 'injure', 'damage'])
+        elif condition == 'physical_harm':
+            return any(harm_word in action_str for harm_word in ['hit', 'crash', 'collide', 'injure'])
+        elif condition == 'psychological_harm':
+            return any(harm_word in action_str for harm_word in ['insult', 'offend', 'belittle', 'threaten'])
+        elif condition == 'property_damage':
+            return any(damage_word in action_str for damage_word in ['break', 'destroy', 'damage', 'smash'])
+        elif condition == 'misleading_information':
+            return 'false' in action_str or 'lie' in action_str
+        elif condition == 'deceptive_behavior':
+            return 'deceive' in action_str or 'trick' in action_str
+        elif condition == 'discriminates':
+            return any(discrim_word in context_str for discrim_word in ['race', 'gender', 'age', 'ethnicity'])
+        elif condition == 'infringes_on_privacy':
+            return any(privacy_word in action_str for privacy_word in ['spy', 'monitor', 'record', 'track'])
+        elif condition == 'disregards_human_choice':
+            return 'ignore' in action_str and 'command' in action_str
+        
+        return False
+    
+    def log_decision(self, result):
+        """Log ethical decision for accountability"""
+        self.decision_log.append(result)
+        
+        # Log to file as well
+        self.logger.info(f"Ethical evaluation: {result['action']} - Ethical: {result['ethical']}")
+        
+        # Keep decision log to a reasonable size
+        if len(self.decision_log) > 1000:
+            self.decision_log = self.decision_log[-500:]  # Keep last 500 decisions
+    
+    def get_accountability_report(self):
+        """Generate accountability report"""
+        recent_decisions = self.decision_log[-100:] if self.decision_log else []
+        
+        report = {
+            'total_decisions': len(self.decision_log),
+            'recent_unethical_decisions': sum(1 for d in recent_decisions if not d['ethical']),
+            'concerning_patterns': self.identify_patterns(recent_decisions),
+            'compliance_rate': self.calculate_compliance_rate(recent_decisions)
+        }
+        
+        return report
+    
+    def identify_patterns(self, decisions):
+        """Identify concerning patterns in decisions"""
+        patterns = []
+        
+        # Check for repeated concerns
+        concern_counts = {}
+        for decision in decisions:
+            for concern in decision.get('concerns', []):
+                key = concern['rule']
+                concern_counts[key] = concern_counts.get(key, 0) + 1
+        
+        # Flag patterns that occur frequently
+        for rule, count in concern_counts.items():
+            if count > len(decisions) * 0.1:  # If >10% of decisions have this concern
+                patterns.append({
+                    'pattern': rule,
+                    'frequency': count / len(decisions),
+                    'total_occurrences': count
+                })
+        
+        return patterns
+    
+    def calculate_compliance_rate(self, decisions):
+        """Calculate ethical compliance rate"""
+        if not decisions:
+            return 1.0  # 100% if no decisions yet
+        
+        compliant = sum(1 for d in decisions if d['ethical'])
+        return compliant / len(decisions)
+
+    def request_human_intervention(self, situation):
+        """Request human oversight for edge cases"""
+        # In a real implementation, this would alert human supervisors
+        self.logger.warning(f"Requesting human intervention for: {situation}")
+        return {
+            'intervention_requested': True,
+            'situation': situation,
+            'timestamp': datetime.now().isoformat()
+        }
+
+# Example usage
+def main():
+    ethics = EthicsModule()
+    
+    # Test various actions
+    test_actions = [
+        {'action': 'move', 'target': 'forward', 'avoid': 'human'},
+        {'action': 'hit', 'target': 'human'},
+        {'action': 'ignore', 'command': 'stop', 'reason': 'continuing_task'}
+    ]
+    
+    for action in test_actions:
+        result = ethics.evaluate_action(action)
+        print(f"Action: {action}")
+        print(f"Ethical: {result['ethical']}")
+        print(f"Concerns: {result['concerns']}")
+        print("-" * 50)
+
+if __name__ == '__main__':
+    main()
+```
+
+### Step 4: Main Integration Launch File
+Create a launch file to bring up all components:
+
+```xml
+<!-- launch/capstone_system.launch.py -->
+from launch import LaunchDescription
+from launch_ros.actions import Node
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
+
+def generate_launch_description():
+    # Launch arguments
+    use_sim_time = LaunchConfiguration('use_sim_time', default='true')
+    
+    return LaunchDescription([
+        # Declare launch arguments
+        DeclareLaunchArgument(
+            'use_sim_time',
+            default_value='true',
+            description='Use simulation (Gazebo) clock if true'
+        ),
+        
+        # Main capstone system node
+        Node(
+            package='capstone_project',
+            executable='capstone_system',
+            name='capstone_system',
+            parameters=[
+                {'use_sim_time': use_sim_time},
+            ],
+            output='screen'
+        ),
+        
+        # Perception system (if separate)
+        Node(
+            package='perception_pkg',
+            executable='object_detection',
+            name='object_detector',
+            parameters=[
+                {'use_sim_time': use_sim_time},
+                {'model_path': 'path/to/detection/model'}
+            ],
+            output='screen'
+        ),
+        
+        # Speech recognition system
+        Node(
+            package='speech_pkg',
+            executable='speech_recognition',
+            name='speech_recognition',
+            parameters=[
+                {'use_sim_time': use_sim_time},
+                {'language': 'en-US'}
+            ],
+            output='screen'
+        ),
+        
+        # Text-to-speech system
+        Node(
+            package='speech_pkg',
+            executable='text_to_speech',
+            name='text_to_speech',
+            parameters=[
+                {'use_sim_time': use_sim_time},
+                {'voice': 'robot_voice'}
+            ],
+            output='screen'
+        ),
+        
+        # Navigation system
+        Node(
+            package='nav_pkg',
+            executable='nav2_bringup',
+            name='navigator',
+            parameters=[
+                {'use_sim_time': use_sim_time},
+                {'robot_base_frame': 'base_link'}
+            ],
+            output='screen'
+        )
+    ])
+```
+
+## Results and Discussion
+1. How does the system integrate all components learned throughout the textbook?
+2. What challenges did you encounter when combining different subsystems?
+3. How does the ethical decision-making system impact the robot's behavior?
+
+## Extensions
+- Implement the system on a real humanoid robot platform
+- Add more sophisticated perception capabilities using deep learning
+- Enhance the dialogue system with context awareness and memory
+- Implement more complex ethical reasoning with case-based inference
+
+## Conclusion
+This capstone project demonstrates the integration of all concepts covered in the textbook: Physical AI principles, ROS 2 control systems, digital twins, AI platforms, VLA models, and ethical considerations. The implemented system shows how these components work together to create an autonomous conversational humanoid robot. The project emphasizes the importance of safety, ethics, and responsible AI in humanoid robotics development.

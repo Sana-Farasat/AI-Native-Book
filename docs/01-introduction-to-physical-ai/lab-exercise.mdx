@@ -1,0 +1,169 @@
+---
+title: "Lab Exercise: Physical AI Simulation"
+---
+
+# Lab Exercise: Building Your First Physical AI Simulation
+
+## Objective
+In this lab, you'll create a simple simulated environment where a basic robot learns to navigate toward a light source, demonstrating fundamental principles of embodied intelligence.
+
+## Prerequisites
+- Basic understanding of robotics simulation
+- Python programming knowledge
+- Gazebo or similar simulation environment (optional for this exercise)
+
+## Theory
+Physical AI emphasizes that intelligence emerges from the tight coupling between perception, action, and the environment. In this lab, we'll implement a simple agent that demonstrates:
+- Sensorimotor integration
+- Goal-oriented behavior
+- Environmental interaction
+
+## Implementation
+
+### Step 1: Environment Setup
+Create a simple environment with a light source and a robot agent:
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+
+class SimpleEnvironment:
+    def __init__(self, width=10, height=10):
+        self.width = width
+        self.height = height
+        self.light_source = np.array([width * 0.8, height * 0.8])  # Light in bottom-right corner
+        
+    def get_light_intensity(self, position):
+        """Calculate light intensity based on distance from light source"""
+        distance = np.linalg.norm(position - self.light_source)
+        # Simulate inverse square law (simplified)
+        max_intensity = 1.0
+        return max(0, max_intensity - 0.1 * distance)
+    
+    def draw_environment(self, agent_position):
+        """Visualize the environment"""
+        plt.figure(figsize=(8, 8))
+        plt.xlim(0, self.width)
+        plt.ylim(0, self.height)
+        
+        # Draw light source
+        plt.plot(self.light_source[0], self.light_source[1], 'yo', markersize=15, label='Light Source')
+        
+        # Draw agent
+        plt.plot(agent_position[0], agent_position[1], 'bo', markersize=10, label='Robot Agent')
+        
+        plt.title('Physical AI Simulation Environment')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+
+class RobotAgent:
+    def __init__(self, initial_position):
+        self.position = np.array(initial_position, dtype=float)
+        self.sensor_range = 1.0
+        self.step_size = 0.2
+        
+    def sense_light(self, environment):
+        """Sense light intensity in the environment"""
+        intensity = environment.get_light_intensity(self.position)
+        return intensity
+        
+    def sense_gradient(self, environment):
+        """Estimate light gradient by sampling nearby positions"""
+        current_intensity = environment.get_light_intensity(self.position)
+        
+        # Sample points in four directions
+        directions = [
+            np.array([self.step_size, 0]),    # Right
+            np.array([-self.step_size, 0]),   # Left
+            np.array([0, self.step_size]),    # Up
+            np.array([0, -self.step_size])    # Down
+        ]
+        
+        gradients = []
+        for direction in directions:
+            neighbor_pos = self.position + direction
+            neighbor_intensity = environment.get_light_intensity(neighbor_pos)
+            gradients.append(neighbor_intensity - current_intensity)
+        
+        return gradients
+        
+    def move_toward_light(self, environment):
+        """Move the agent toward the light source based on sensed gradient"""
+        gradients = self.sense_gradient(environment)
+        
+        # Determine best direction (highest positive gradient)
+        best_direction_idx = np.argmax(gradients)
+        
+        # Move in that direction
+        directions = [
+            np.array([self.step_size, 0]),    # Right
+            np.array([-self.step_size, 0]),   # Left
+            np.array([0, self.step_size]),    # Up
+            np.array([0, -self.step_size])    # Down
+        ]
+        
+        if gradients[best_direction_idx] > 0:  # Only move if gradient is positive
+            self.position += directions[best_direction_idx]
+        
+        # Keep agent within bounds
+        self.position[0] = np.clip(self.position[0], 0, environment.width)
+        self.position[1] = np.clip(self.position[1], 0, environment.height)
+
+# Run the simulation
+def run_simulation():
+    env = SimpleEnvironment(10, 10)
+    agent = RobotAgent([2, 2])  # Start in top-left corner
+    
+    # Run for a number of steps
+    positions = [agent.position.copy()]
+    
+    for step in range(50):
+        agent.move_toward_light(env)
+        positions.append(agent.position.copy())
+        
+        # Check if close enough to light source
+        if np.linalg.norm(agent.position - env.light_source) < 0.5:
+            print(f"Goal reached in {step + 1} steps!")
+            break
+    
+    # Plot path
+    positions = np.array(positions)
+    plt.figure(figsize=(8, 8))
+    plt.plot(positions[:, 0], positions[:, 1], 'b-', linewidth=2, label='Agent Path')
+    plt.plot(positions[0, 0], positions[0, 1], 'ro', markersize=10, label='Start')
+    plt.plot(positions[-1, 0], positions[-1, 1], 'go', markersize=10, label='End')
+    plt.plot(env.light_source[0], env.light_source[1], 'yo', markersize=15, label='Light Source')
+    
+    plt.xlim(0, env.width)
+    plt.ylim(0, env.height)
+    plt.title('Agent Path Toward Light Source')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+    
+    return positions
+
+if __name__ == "__main__":
+    path = run_simulation()
+```
+
+### Step 2: Analysis Questions
+1. How does the agent's behavior demonstrate embodied intelligence?
+2. What would happen if the agent moved too quickly?
+3. How could you make the environment more complex to challenge the agent?
+
+### Step 3: Extensions
+Try modifying the simulation:
+- Add obstacles that the agent must navigate around
+- Change the light source position during simulation
+- Implement a more sophisticated movement strategy
+
+## Results and Discussion
+After running the simulation, analyze the agent's behavior:
+- Did it successfully navigate toward the light source?
+- How did the sensorimotor coupling contribute to the behavior?
+- What improvements could be made to the agent's strategy?
+
+## Conclusion
+This lab demonstrates how simple sensorimotor interactions can produce goal-directed behavior, illustrating fundamental principles of Physical AI. The tight coupling between sensing, movement, and environment response generates intelligent behavior without complex planning algorithms.

@@ -1,0 +1,141 @@
+.navbar {
+  padding: 1rem 1rem;
+  color: #553c9a;
+}
+
+.logoLink {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: white;
+  font-weight: 600;
+}
+
+.logoImg {
+  height: 40px;
+  width: 40px;
+  margin-right: 12px;
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #553c9a;
+  margin: 0;
+} 
+
+/* Desktop Menu */
+.desktopMenu {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  margin-left: 3rem;
+}
+
+.desktopMenu a {
+   color: #553c9a;
+  font-weight: 500;
+  font-size: 1.05rem;
+  transition: all 0.2s;
+}
+
+.desktopMenu a:hover {
+  color: #e9d8fd;
+  transform: translateY(-1px);
+}  
+
+.languageDropdown {
+  position: relative;
+  display: inline-block;
+  color: white;
+  background-color: #553c9a;
+}
+
+.languageButton {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: none;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s;
+  backdrop-filter: blur(5px);
+}
+
+.languageButton:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+.languageMenu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  color: #553c9a;
+  min-width: 120px;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.3s;
+  z-index: 1000;
+  margin-top: 0.5rem;
+}
+
+.languageDropdown:hover .languageMenu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.languageItem {
+  display: block;
+  padding: 0.7rem 1rem;
+  color: rgb(248, 159, 178);
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.languageItem:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgb(196, 83, 153)
+}  
+
+/* GitHub & Theme Toggle */
+.githubLink,
+.themeToggle {
+  margin-left: 1rem;
+}
+
+.githubLink a {
+  color: white !important;
+  font-weight: 500;
+} 
+
+/* Mobile Responsive */
+@media (max-width: 426px){
+  
+.desktopMenu{
+      display: block;
+    }
+
+.title {
+    font-size: 0.8rem;
+  }
+  
+.logoImg {
+    height: 35px;
+    width: 35px;
+  }
+  
+.languageButton {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.9rem;
+  }
+}
+

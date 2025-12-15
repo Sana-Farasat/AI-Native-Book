@@ -1,0 +1,122 @@
+/**
+ * Custom CSS module for the module cards with hover effects
+ */
+.moduleCardsContainer {
+  padding: 3rem 0;
+  background-color: var(--ifm-color-emphasis-100);
+}
+
+.sectionTitle {
+  text-align: center;
+  color: var(--ifm-color-primary);
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.sectionSubtitle {
+  text-align: center;
+  color: var(--ifm-color-emphasis-700);
+  margin-bottom: 2.5rem;
+}
+
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.moduleCard {
+  background: linear-gradient(145deg, #ffffff, #f0e6ff);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+  transition: all 0.3s ease;
+  border: 1px solid rgba(107, 70, 193, 0.1);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+}
+
+.moduleCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(107, 70, 193, 0.2);
+  text-decoration: none;
+  color: inherit;
+}
+
+html[data-theme='dark'] .moduleCard {
+  background: linear-gradient(145deg, #2d2962, #1a1926);
+  border: 1px solid rgba(107, 70, 193, 0.3);
+}
+
+.cardImageContainer {
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cardImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cardContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.cardTitle {
+  color: var(--ifm-color-primary);
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  font-size: 1.25rem;
+}
+
+.cardDescription {
+  color: var(--ifm-color-emphasis-700);
+  flex: 1;
+}
+
+.glowCard {
+  position: relative;
+  overflow: hidden;
+}
+
+.glowCard::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 14px; /* Slightly larger than card to show glow */
+  background: linear-gradient(45deg, var(--ifm-color-primary), var(--ifm-color-secondary), var(--ifm-color-primary));
+  z-index: -1;
+  animation: glowing 3s linear infinite;
+  opacity: 0.4;
+}
+
+@keyframes glowing {
+  0% { background-position: 0 0; }
+  50% { background-position: 400% 0; }
+  100% { background-position: 0 0; }
+}
+
+@media (max-width: 768px) {
+  .cardsGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .sectionTitle {
+    font-size: 1.5rem;
+  }
+}

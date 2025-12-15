@@ -1,0 +1,65 @@
+.summaryContainer {
+  margin: 1.5rem 0;
+  border: 2px solid var(--ifm-color-primary);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.summaryHeader {
+  background-color: var(--ifm-color-primary);
+  color: white;
+  padding: 1rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summaryHeader:hover {
+  background-color: var(--ifm-color-primary-dark);
+}
+
+.toggleIcon {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.summaryContent {
+  padding: 1.5rem;
+  background-color: var(--ifm-color-emphasis-100);
+}
+
+.keyPointsList {
+  padding-left: 1.5rem;
+  margin: 1rem 0;
+}
+
+.keyPoint {
+  margin-bottom: 0.5rem;
+}
+
+.mindmapContainer {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background-color: white;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 4px;
+}
+
+.mermaidCode {
+  background-color: var(--prism-background-color);
+  color: var(--prism-color);
+  padding: 1rem;
+  border-radius: var(--ifm-global-radius);
+  overflow-x: auto;
+  font-size: 0.8rem;
+  margin: 1rem 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.mindmapDescription {
+  font-style: italic;
+  color: var(--ifm-color-emphasis-700);
+  margin-top: 1rem;
+}

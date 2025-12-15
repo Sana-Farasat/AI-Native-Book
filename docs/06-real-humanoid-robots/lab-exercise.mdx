@@ -1,0 +1,991 @@
+---
+title: "Lab Exercise: Building & Controlling Real Humanoid Robots"
+---
+
+# Lab Exercise: Building & Controlling Real Humanoid Robots
+
+## Objective
+In this lab, you'll configure a simulated humanoid robot platform (using Gazebo or Isaac Sim) and implement basic control systems for locomotion and manipulation tasks.
+
+## Prerequisites
+- Ubuntu 20.04 or 22.04 with ROS 2 Humble Hawksbill
+- Gazebo Classic or Garden installed
+- Basic Python/C++ programming skills
+- Understanding of robotics kinematics and dynamics
+
+## Theory
+Humanoid robot control requires coordination of multiple systems: perception, planning, control, and actuation. This lab demonstrates fundamental control concepts using simulation before applying them to real hardware.
+
+## Implementation
+
+### Step 1: Setting up the Humanoid Robot Model
+First, let's create a basic humanoid robot model in URDF:
+
+```xml
+<!-- humanoid_robot.urdf -->
+<?xml version="1.0"?>
+<robot name="tutorial_humanoid">
+  <!-- Base body -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.3 0.2 0.5"/>
+      </geometry>
+      <material name="grey">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.3 0.2 0.5"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="10.0"/>
+      <inertia ixx="0.2" ixy="0.0" ixz="0.0" iyy="0.3" iyz="0.0" izz="0.4"/>
+    </inertial>
+  </link>
+
+  <!-- Head -->
+  <link name="head">
+    <visual>
+      <geometry>
+        <sphere radius="0.1"/>
+      </geometry>
+      <material name="white">
+        <color rgba="0.9 0.9 0.9 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <sphere radius="0.1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="1.0"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <joint name="neck_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="head"/>
+    <origin xyz="0 0 0.35"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-0.78" upper="0.78" effort="10.0" velocity="1.0"/>
+  </joint>
+
+  <!-- Left Arm -->
+  <link name="left_shoulder">
+    <visual>
+      <geometry>
+        <cylinder length="0.2" radius="0.04"/>
+      </geometry>
+      <material name="red">
+        <color rgba="1.0 0.0 0.0 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.2" radius="0.04"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.5"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <joint name="left_shoulder_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="left_shoulder"/>
+    <origin xyz="0.15 0.0 0.1" rpy="0 0 1.57"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10.0" velocity="1.0"/>
+  </joint>
+
+  <link name="left_upper_arm">
+    <visual>
+      <geometry>
+        <cylinder length="0.3" radius="0.04"/>
+      </geometry>
+      <material name="red">
+        <color rgba="1.0 0.0 0.0 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.3" radius="0.04"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.5"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <joint name="left_elbow_joint" type="revolute">
+    <parent link="left_shoulder"/>
+    <child link="left_upper_arm"/>
+    <origin xyz="0.0 0.0 -0.2" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10.0" velocity="1.0"/>
+  </joint>
+
+  <link name="left_lower_arm">
+    <visual>
+      <geometry>
+        <cylinder length="0.3" radius="0.04"/>
+      </geometry>
+      <material name="red">
+        <color rgba="1.0 0.0 0.0 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.3" radius="0.04"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.5"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <joint name="left_wrist_joint" type="revolute">
+    <parent link="left_upper_arm"/>
+    <child link="left_lower_arm"/>
+    <origin xyz="0.0 0.0 -0.3" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10.0" velocity="1.0"/>
+  </joint>
+
+  <!-- Right Arm (similar to left arm) -->
+  <link name="right_shoulder">
+    <visual>
+      <geometry>
+        <cylinder length="0.2" radius="0.04"/>
+      </geometry>
+      <material name="blue">
+        <color rgba="0.0 0.0 1.0 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.2" radius="0.04"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.5"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <joint name="right_shoulder_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="right_shoulder"/>
+    <origin xyz="-0.15 0.0 0.1" rpy="0 0 -1.57"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10.0" velocity="1.0"/>
+  </joint>
+
+  <link name="right_upper_arm">
+    <visual>
+      <geometry>
+        <cylinder length="0.3" radius="0.04"/>
+      </geometry>
+      <material name="blue">
+        <color rgba="0.0 0.0 1.0 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.3" radius="0.04"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.5"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <joint name="right_elbow_joint" type="revolute">
+    <parent link="right_shoulder"/>
+    <child link="right_upper_arm"/>
+    <origin xyz="0.0 0.0 -0.2" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10.0" velocity="1.0"/>
+  </joint>
+
+  <link name="right_lower_arm">
+    <visual>
+      <geometry>
+        <cylinder length="0.3" radius="0.04"/>
+      </geometry>
+      <material name="blue">
+        <color rgba="0.0 0.0 1.0 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.3" radius="0.04"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.5"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <joint name="right_wrist_joint" type="revolute">
+    <parent link="right_upper_arm"/>
+    <child link="right_lower_arm"/>
+    <origin xyz="0.0 0.0 -0.3" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10.0" velocity="1.0"/>
+  </joint>
+
+  <!-- Left Leg -->
+  <link name="left_hip">
+    <visual>
+      <geometry>
+        <cylinder length="0.15" radius="0.05"/>
+      </geometry>
+      <material name="green">
+        <color rgba="0.0 1.0 0.0 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.15" radius="0.05"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="1.0"/>
+      <inertia ixx="0.002" ixy="0.0" ixz="0.0" iyy="0.002" iyz="0.0" izz="0.002"/>
+    </inertial>
+  </link>
+
+  <joint name="left_hip_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="left_hip"/>
+    <origin xyz="0.05 -0.08 -0.25"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="20.0" velocity="1.0"/>
+  </joint>
+
+  <link name="left_upper_leg">
+    <visual>
+      <geometry>
+        <cylinder length="0.4" radius="0.05"/>
+      </geometry>
+      <material name="green">
+        <color rgba="0.0 1.0 0.0 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.4" radius="0.05"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="2.0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
+  </link>
+
+  <joint name="left_knee_joint" type="revolute">
+    <parent link="left_hip"/>
+    <child link="left_upper_leg"/>
+    <origin xyz="0.0 0.0 -0.2"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-1.57" upper="1.57" effort="20.0" velocity="1.0"/>
+  </joint>
+
+  <link name="left_lower_leg">
+    <visual>
+      <geometry>
+        <cylinder length="0.4" radius="0.05"/>
+      </geometry>
+      <material name="green">
+        <color rgba="0.0 1.0 0.0 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.4" radius="0.05"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="1.5"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
+  </link>
+
+  <joint name="left_ankle_joint" type="revolute">
+    <parent link="left_upper_leg"/>
+    <child link="left_lower_leg"/>
+    <origin xyz="0.0 0.0 -0.4"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="15.0" velocity="1.0"/>
+  </joint>
+
+  <!-- Right Leg -->
+  <link name="right_hip">
+    <visual>
+      <geometry>
+        <cylinder length="0.15" radius="0.05"/>
+      </geometry>
+      <material name="green">
+        <color rgba="0.0 1.0 0.0 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.15" radius="0.05"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="1.0"/>
+      <inertia ixx="0.002" ixy="0.0" ixz="0.0" iyy="0.002" iyz="0.0" izz="0.002"/>
+    </inertial>
+  </link>
+
+  <joint name="right_hip_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="right_hip"/>
+    <origin xyz="0.05 0.08 -0.25"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="20.0" velocity="1.0"/>
+  </joint>
+
+  <link name="right_upper_leg">
+    <visual>
+      <geometry>
+        <cylinder length="0.4" radius="0.05"/>
+      </geometry>
+      <material name="green">
+        <color rgba="0.0 1.0 0.0 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.4" radius="0.05"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="2.0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
+  </link>
+
+  <joint name="right_knee_joint" type="revolute">
+    <parent link="right_hip"/>
+    <child link="right_upper_leg"/>
+    <origin xyz="0.0 0.0 -0.2"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-1.57" upper="1.57" effort="20.0" velocity="1.0"/>
+  </joint>
+
+  <link name="right_lower_leg">
+    <visual>
+      <geometry>
+        <cylinder length="0.4" radius="0.05"/>
+      </geometry>
+      <material name="green">
+        <color rgba="0.0 1.0 0.0 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.4" radius="0.05"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="1.5"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
+  </link>
+
+  <joint name="right_ankle_joint" type="revolute">
+    <parent link="right_upper_leg"/>
+    <child link="right_lower_leg"/>
+    <origin xyz="0.0 0.0 -0.4"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="15.0" velocity="1.0"/>
+  </joint>
+</robot>
+```
+
+### Step 2: Setting up ROS 2 Control System
+Create a ROS 2 controller that implements basic humanoid robot control:
+
+```python
+# humanoid_controller.py
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import JointState
+from geometry_msgs.msg import Twist
+from std_msgs.msg import String
+import numpy as np
+from scipy.spatial.transform import Rotation as R
+import math
+
+class HumanoidController(Node):
+    """ROS 2 controller for humanoid robot"""
+    
+    def __init__(self):
+        super().__init__('humanoid_controller')
+        
+        # Joint state publisher and subscriber
+        self.joint_pub = self.create_publisher(JointState, '/joint_commands', 10)
+        self.joint_sub = self.create_subscription(
+            JointState, 
+            '/joint_states', 
+            self.joint_state_callback, 
+            10
+        )
+        
+        # Command subscriber
+        self.cmd_sub = self.create_subscription(
+            Twist,
+            '/cmd_vel',
+            self.cmd_vel_callback,
+            10
+        )
+        
+        # Status publisher
+        self.status_pub = self.create_publisher(String, '/robot_status', 10)
+        
+        # Initialize joint states
+        self.joint_names = [
+            'left_shoulder_joint', 'left_elbow_joint', 'left_wrist_joint',
+            'right_shoulder_joint', 'right_elbow_joint', 'right_wrist_joint',
+            'left_hip_joint', 'left_knee_joint', 'left_ankle_joint',
+            'right_hip_joint', 'right_knee_joint', 'right_ankle_joint',
+            'neck_joint'
+        ]
+        
+        self.joint_positions = [0.0] * len(self.joint_names)
+        self.joint_velocities = [0.0] * len(self.joint_names)
+        self.joint_efforts = [0.0] * len(self.joint_names)
+        
+        # Walking pattern parameters
+        self.step_size = 0.1
+        self.step_height = 0.05
+        self.walk_phase = 0.0
+        
+        # Timer for control loop
+        self.control_timer = self.create_timer(0.02, self.control_loop)  # 50Hz
+        
+        self.get_logger().info("Humanoid Controller initialized")
+
+    def joint_state_callback(self, msg):
+        """Update current joint states"""
+        # Find the indices of our joints in the message
+        for i, joint_name in enumerate(self.joint_names):
+            try:
+                idx = msg.name.index(joint_name)
+                self.joint_positions[i] = msg.position[idx]
+                if idx < len(msg.velocity):
+                    self.joint_velocities[i] = msg.velocity[idx]
+                if idx < len(msg.effort):
+                    self.joint_efforts[i] = msg.effort[idx]
+            except ValueError:
+                # Joint not in message, skip
+                continue
+
+    def cmd_vel_callback(self, msg):
+        """Process velocity commands"""
+        linear_x = msg.linear.x
+        angular_z = msg.angular.z
+        
+        # Update walking pattern based on commands
+        if abs(linear_x) > 0.01 or abs(angular_z) > 0.01:
+            self.walk_phase += 0.1  # Increase phase when moving
+
+    def calculate_inverse_kinematics(self, target_positions):
+        """Calculate joint angles to reach target positions (simplified)"""
+        # This is a simplified IK solution
+        # In a real implementation, you'd use more sophisticated methods
+        # like Jacobian-based IK or optimization-based approaches
+        
+        # For this example, we'll return the same values
+        return target_positions
+
+    def generate_walking_pattern(self):
+        """Generate walking pattern for the humanoid"""
+        # Simple walking gait using sinusoidal patterns
+        left_leg_phase = self.walk_phase
+        right_leg_phase = self.walk_phase + math.pi  # Opposite phase
+        
+        # Hip joint movement for walking
+        left_hip_angle = math.sin(left_leg_phase) * 0.2
+        right_hip_angle = math.sin(right_leg_phase) * 0.2
+        
+        # Knee joint movement for walking
+        left_knee_angle = math.sin(left_leg_phase + math.pi/2) * 0.3
+        right_knee_angle = math.sin(right_leg_phase + math.pi/2) * 0.3
+        
+        # Ankle joint movement for walking
+        left_ankle_angle = math.sin(left_leg_phase) * 0.1
+        right_ankle_angle = math.sin(right_leg_phase) * 0.1
+        
+        # Create target positions for walking
+        target_positions = [0.0] * len(self.joint_names)
+        
+        # Set leg joint positions
+        target_positions[self.joint_names.index('left_hip_joint')] = left_hip_angle
+        target_positions[self.joint_names.index('left_knee_joint')] = left_knee_angle
+        target_positions[self.joint_names.index('left_ankle_joint')] = left_ankle_angle
+        
+        target_positions[self.joint_names.index('right_hip_joint')] = right_hip_angle
+        target_positions[self.joint_names.index('right_knee_joint')] = right_knee_angle
+        target_positions[self.joint_names.index('right_ankle_joint')] = right_ankle_angle
+        
+        # Add some arm movement for balance
+        target_positions[self.joint_names.index('left_shoulder_joint')] = math.sin(self.walk_phase) * 0.1
+        target_positions[self.joint_names.index('right_shoulder_joint')] = math.sin(self.walk_phase + math.pi) * 0.1
+        
+        return target_positions
+
+    def control_loop(self):
+        """Main control loop"""
+        # Generate walking pattern
+        target_positions = self.generate_walking_pattern()
+        
+        # Create joint state message
+        msg = JointState()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.name = self.joint_names
+        msg.position = target_positions
+        msg.velocity = [0.0] * len(self.joint_names)  # Simplified - no velocity control
+        msg.effort = [0.0] * len(self.joint_names)   # Simplified - no effort control
+        
+        # Publish joint commands
+        self.joint_pub.publish(msg)
+        
+        # Publish status
+        status_msg = String()
+        status_msg.data = f"Standing/walking with phase: {self.walk_phase:.2f}"
+        self.status_pub.publish(status_msg)
+
+    def move_to_pose(self, joint_positions):
+        """Move robot to a specific joint configuration"""
+        msg = JointState()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.name = self.joint_names
+        msg.position = joint_positions
+        
+        self.joint_pub.publish(msg)
+
+def main(args=None):
+    rclpy.init(args=args)
+    controller = HumanoidController()
+    
+    try:
+        rclpy.spin(controller)
+    except KeyboardInterrupt:
+        controller.get_logger().info('Shutting down Humanoid Controller')
+    finally:
+        controller.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+### Step 3: Balance Control Implementation
+Implement a simple balance controller for the humanoid:
+
+```python
+# balance_controller.py
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import Imu, JointState
+from geometry_msgs.msg import Vector3
+from std_msgs.msg import Float64
+import numpy as np
+from collections import deque
+
+class BalanceController(Node):
+    """Balance controller using IMU feedback and PID control"""
+    
+    def __init__(self):
+        super().__init__('balance_controller')
+        
+        # Subscribe to IMU for balance feedback
+        self.imu_sub = self.create_subscription(
+            Imu,
+            '/imu/data',
+            self.imu_callback,
+            10
+        )
+        
+        # Joint command publisher
+        self.joint_pub = self.create_publisher(JointState, '/joint_commands', 10)
+        
+        # Initialize joint names and target positions
+        self.joint_names = [
+            'left_shoulder_joint', 'left_elbow_joint', 'left_wrist_joint',
+            'right_shoulder_joint', 'right_elbow_joint', 'right_wrist_joint',
+            'left_hip_joint', 'left_knee_joint', 'left_ankle_joint',
+            'right_hip_joint', 'right_knee_joint', 'right_ankle_joint',
+            'neck_joint'
+        ]
+        
+        # Current state
+        self.roll = 0.0
+        self.pitch = 0.0
+        self.yaw = 0.0
+        
+        # PID controller parameters for balance
+        self.pid_params = {
+            'roll_kp': 2.0,
+            'roll_ki': 0.1,
+            'roll_kd': 0.5,
+            'pitch_kp': 2.0,
+            'pitch_ki': 0.1,
+            'pitch_kd': 0.5,
+        }
+        
+        # PID error integrals and previous errors
+        self.roll_error_integral = 0.0
+        self.pitch_error_integral = 0.0
+        self.prev_roll_error = 0.0
+        self.prev_pitch_error = 0.0
+        
+        # Balance targets (should be 0 for upright position)
+        self.roll_target = 0.0
+        self.pitch_target = 0.0
+        
+        # Buffer for smoothing measurements
+        self.roll_buffer = deque(maxlen=5)
+        self.pitch_buffer = deque(maxlen=5)
+        
+        # Control timer (100Hz)
+        self.control_timer = self.create_timer(0.01, self.balance_control_loop)
+        
+        self.get_logger().info("Balance Controller initialized")
+
+    def imu_callback(self, msg):
+        """Process IMU data to extract orientation"""
+        # Convert quaternion to Euler angles
+        w, x, y, z = msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z
+        
+        # Calculate roll, pitch, yaw from quaternion
+        sinr_cosp = 2 * (w * x + y * z)
+        cosr_cosp = 1 - 2 * (x * x + y * y)
+        self.roll = np.arctan2(sinr_cosp, cosr_cosp)
+        
+        sinp = 2 * (w * y - z * x)
+        if abs(sinp) >= 1:
+            self.pitch = np.copysign(np.pi / 2, sinp)  # Use 90 degrees if out of range
+        else:
+            self.pitch = np.arcsin(sinp)
+        
+        siny_cosp = 2 * (w * z + x * y)
+        cosy_cosp = 1 - 2 * (y * y + z * z)
+        self.yaw = np.arctan2(siny_cosp, cosy_cosp)
+        
+        # Add to buffer for smoothing
+        self.roll_buffer.append(self.roll)
+        self.pitch_buffer.append(self.pitch)
+
+    def balance_control_loop(self):
+        """Main balance control loop using PID"""
+        # Use average from buffer for smoother control
+        if len(self.roll_buffer) > 0:
+            avg_roll = sum(self.roll_buffer) / len(self.roll_buffer)
+        else:
+            avg_roll = 0.0
+            
+        if len(self.pitch_buffer) > 0:
+            avg_pitch = sum(self.pitch_buffer) / len(self.pitch_buffer)
+        else:
+            avg_pitch = 0.0
+        
+        # Calculate errors
+        roll_error = self.roll_target - avg_roll
+        pitch_error = self.pitch_target - avg_pitch
+        
+        # Update error integrals (with anti-windup)
+        self.roll_error_integral += roll_error * 0.01  # dt = 0.01 seconds
+        self.pitch_error_integral += pitch_error * 0.01
+        
+        # Apply anti-windup
+        self.roll_error_integral = np.clip(self.roll_error_integral, -1.0, 1.0)
+        self.pitch_error_integral = np.clip(self.pitch_error_integral, -1.0, 1.0)
+        
+        # Calculate derivative terms
+        roll_derivative = (roll_error - self.prev_roll_error) / 0.01
+        pitch_derivative = (pitch_error - self.prev_pitch_error) / 0.01
+        
+        # PID control for roll
+        roll_control = (
+            self.pid_params['roll_kp'] * roll_error +
+            self.pid_params['roll_ki'] * self.roll_error_integral +
+            self.pid_params['roll_kd'] * roll_derivative
+        )
+        
+        # PID control for pitch
+        pitch_control = (
+            self.pid_params['pitch_kp'] * pitch_error +
+            self.pid_params['pitch_ki'] * self.pitch_error_integral +
+            self.pid_params['pitch_kd'] * pitch_derivative
+        )
+        
+        # Update previous errors
+        self.prev_roll_error = roll_error
+        self.prev_pitch_error = pitch_error
+        
+        # Generate corrective joint commands
+        # This is a simplified model - in reality, you'd need more sophisticated control
+        target_positions = [0.0] * len(self.joint_names)
+        
+        # Apply corrections to leg joints to maintain balance
+        target_positions[self.joint_names.index('left_hip_joint')] = pitch_control * 0.1
+        target_positions[self.joint_names.index('right_hip_joint')] = pitch_control * 0.1
+        target_positions[self.joint_names.index('left_ankle_joint')] = -pitch_control * 0.05
+        target_positions[self.joint_names.index('right_ankle_joint')] = -pitch_control * 0.05
+        
+        # Apply corrections to arm joints to assist balance
+        target_positions[self.joint_names.index('left_shoulder_joint')] = roll_control * 0.2
+        target_positions[self.joint_names.index('right_shoulder_joint')] = -roll_control * 0.2
+        
+        # Publish balance correction commands
+        msg = JointState()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.name = self.joint_names
+        msg.position = target_positions
+        
+        self.joint_pub.publish(msg)
+        
+        # Log for debugging
+        self.get_logger().debug(f'Roll: {np.degrees(avg_roll):.2f}°, Pitch: {np.degrees(avg_pitch):.2f}°, '
+                               f'Control: Roll={roll_control:.3f}, Pitch={pitch_control:.3f}')
+
+def main(args=None):
+    rclpy.init(args=args)
+    controller = BalanceController()
+    
+    try:
+        rclpy.spin(controller)
+    except KeyboardInterrupt:
+        controller.get_logger().info('Shutting down Balance Controller')
+    finally:
+        controller.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+### Step 4: Manipulation Control
+Implement a simple manipulation controller:
+
+```python
+# manipulation_controller.py
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import JointState, Image
+from geometry_msgs.msg import Pose, Point, Vector3
+from std_msgs.msg import String
+from cv_bridge import CvBridge
+import numpy as np
+import cv2
+
+class ManipulationController(Node):
+    """Controller for arm manipulation tasks"""
+    
+    def __init__(self):
+        super().__init__('manipulation_controller')
+        
+        # Joint command publisher
+        self.joint_pub = self.create_publisher(JointState, '/joint_commands', 10)
+        
+        # Camera subscriber
+        self.camera_sub = self.create_subscription(
+            Image,
+            '/camera/image_raw',
+            self.image_callback,
+            10
+        )
+        
+        # Object detection subscriber
+        self.detection_sub = self.create_subscription(
+            String,
+            '/object_detections',
+            self.detection_callback,
+            10
+        )
+        
+        # Initialize CV bridge
+        self.bridge = CvBridge()
+        
+        # Joint names for manipulation
+        self.joint_names = [
+            'left_shoulder_joint', 'left_elbow_joint', 'left_wrist_joint',
+            'right_shoulder_joint', 'right_elbow_joint', 'right_wrist_joint',
+            'left_hip_joint', 'left_knee_joint', 'left_ankle_joint',
+            'right_hip_joint', 'right_knee_joint', 'right_ankle_joint',
+            'neck_joint'
+        ]
+        
+        # Current state
+        self.current_image = None
+        self.detected_object = None
+        
+        # Manipulation targets
+        self.manipulation_target = None
+        self.manipulation_mode = 'idle'  # 'idle', 'reaching', 'grasping', 'holding'
+        
+        # Control timer (30Hz)
+        self.control_timer = self.create_timer(0.033, self.manipulation_control_loop)
+        
+        self.get_logger().info("Manipulation Controller initialized")
+
+    def image_callback(self, msg):
+        """Process camera images"""
+        try:
+            self.current_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+        except Exception as e:
+            self.get_logger().error(f'Error processing image: {str(e)}')
+
+    def detection_callback(self, msg):
+        """Process object detection results"""
+        detection_str = msg.data
+        if 'Detected:' in detection_str:
+            # Simple parsing of detection message
+            parts = detection_str.split(' with confidence:')
+            if len(parts) == 2:
+                self.detected_object = {
+                    'type': parts[0].replace('Detected: ', ''),
+                    'confidence': float(parts[1].strip())
+                }
+                self.get_logger().info(f'Detected: {self.detected_object}')
+
+    def calculate_ik_reach(self, target_position):
+        """Calculate inverse kinematics for reaching target"""
+        # Simplified 2D inverse kinematics for 2-link arm
+        # target_position is [x, y, z] in robot's coordinate system
+        
+        # For this example, assume simplified approach
+        # In a real implementation, you'd use proper IK solvers
+        target_x, target_y, target_z = target_position
+        
+        # Calculate joint angles (simplified)
+        shoulder_angle = np.arctan2(target_y, target_x)
+        elbow_angle = np.arctan2(target_z, np.sqrt(target_x**2 + target_y**2))
+        wrist_angle = 0.0  # Simplified
+        
+        return shoulder_angle, elbow_angle, wrist_angle
+
+    def reach_to_position(self, arm_side, position):
+        """Move specified arm to reach a position"""
+        if arm_side == 'left':
+            joint_indices = [
+                self.joint_names.index('left_shoulder_joint'),
+                self.joint_names.index('left_elbow_joint'),
+                self.joint_names.index('left_wrist_joint')
+            ]
+        else:  # right
+            joint_indices = [
+                self.joint_names.index('right_shoulder_joint'),
+                self.joint_names.index('right_elbow_joint'),
+                self.joint_names.index('right_wrist_joint')
+            ]
+        
+        # Calculate IK for the target position
+        shoulder_angle, elbow_angle, wrist_angle = self.calculate_ik_reach(position)
+        
+        # Create joint command
+        target_positions = [0.0] * len(self.joint_names)
+        
+        # Set target positions for the specific arm
+        target_positions[joint_indices[0]] = shoulder_angle
+        target_positions[joint_indices[1]] = elbow_angle
+        target_positions[joint_indices[2]] = wrist_angle
+        
+        # Publish command
+        msg = JointState()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.name = self.joint_names
+        msg.position = target_positions
+        
+        self.joint_pub.publish(msg)
+        
+        self.get_logger().info(f'Reaching to {position} with {arm_side} arm')
+
+    def manipulation_control_loop(self):
+        """Main manipulation control loop"""
+        if self.manipulation_mode == 'idle' and self.detected_object and self.detected_object['confidence'] > 0.8:
+            # Detected an object, start reaching
+            self.manipulation_mode = 'reaching'
+            self.get_logger().info(f'Starting to reach for {self.detected_object["type"]}')
+            
+            # This is a simplification - in reality you'd need to estimate object position
+            # from the camera image
+            target_pos = [0.5, 0.0, 0.2]  # [x, y, z] in robot's coordinate system
+            self.reach_to_position('right', target_pos)
+
+    def move_arm_to_pose(self, arm_side, pose):
+        """Move arm to specified pose"""
+        # Simplified movement - in reality this would involve trajectory planning
+        if arm_side == 'left':
+            joint_indices = [
+                self.joint_names.index('left_shoulder_joint'),
+                self.joint_names.index('left_elbow_joint'),
+                self.joint_names.index('left_wrist_joint')
+            ]
+        else:  # right
+            joint_indices = [
+                self.joint_names.index('right_shoulder_joint'),
+                self.joint_names.index('right_elbow_joint'),
+                self.joint_names.index('right_wrist_joint')
+            ]
+        
+        # Create joint command
+        target_positions = [0.0] * len(self.joint_names)
+        
+        # Set target positions based on pose (for this example, simplified)
+        target_positions[joint_indices[0]] = pose[0]  # Shoulder
+        target_positions[joint_indices[1]] = pose[1]  # Elbow
+        target_positions[joint_indices[2]] = pose[2]  # Wrist
+        
+        # Publish command
+        msg = JointState()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.name = self.joint_names
+        msg.position = target_positions
+        
+        self.joint_pub.publish(msg)
+
+def main(args=None):
+    rclpy.init(args=args)
+    controller = ManipulationController()
+    
+    try:
+        rclpy.spin(controller)
+    except KeyboardInterrupt:
+        controller.get_logger().info('Shutting down Manipulation Controller')
+    finally:
+        controller.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+## Results and Discussion
+1. How does the control system handle the complexity of humanoid robot dynamics?
+2. What are the challenges in implementing balance control for bipedal locomotion?
+3. How would you extend this system for more complex manipulation tasks?
+
+## Extensions
+- Implement a complete walking controller using ZMP (Zero Moment Point) theory
+- Add computer vision for object detection and grasping
+- Integrate with a real humanoid robot platform like Unitree G1 or Hiwonder
+
+## Conclusion
+This lab demonstrated the fundamental concepts of humanoid robot control including joint-level control, balance maintenance, and manipulation. The implementation showed how ROS 2 can be used to create distributed control systems for complex robots with multiple subsystems working together.

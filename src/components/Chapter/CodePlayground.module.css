@@ -1,0 +1,118 @@
+.playgroundContainer {
+  margin: 1.5rem 0;
+  border: 2px solid var(--ifm-color-primary);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--ifm-color-emphasis-100);
+}
+
+.playgroundHeader {
+  background-color: var(--ifm-color-primary);
+  color: white;
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.languageTag {
+  background-color: var(--ifm-color-primary-dark);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.editorContainer {
+  padding: 1rem;
+  background-color: var(--prism-background-color);
+}
+
+.codeEditor {
+  width: 100%;
+  min-height: 200px;
+  padding: 1rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 4px;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.9rem;
+  background-color: var(--prism-background-color);
+  color: var(--prism-color);
+  resize: vertical;
+}
+
+.controls {
+  padding: 1rem;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  background-color: var(--ifm-color-emphasis-200);
+}
+
+.controlButton {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.runButton {
+  background-color: #28a745;
+  color: white;
+}
+
+.runButton:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.runButton:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.resetButton {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.resetButton:hover {
+  background-color: #e0a800;
+}
+
+.outputContainer {
+  margin: 1rem;
+  border: 1px solid var(--ifm-color-emphasis-400);
+  border-radius: 4px;
+  background-color: white;
+}
+
+.outputHeader {
+  background-color: var(--ifm-color-emphasis-200);
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.outputContent {
+  padding: 1rem;
+  margin: 0;
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.9rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
+.codeGuidance {
+  padding: 1rem;
+  background-color: var(--ifm-color-emphasis-100);
+  border-top: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.codeGuidance p {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+}
