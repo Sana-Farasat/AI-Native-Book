@@ -11,8 +11,11 @@ export default function LayoutWrapper(props) {
   const [chatQuery, setChatQuery] = useState('');
 
   // ✅ ONLY customFields (browser-safe)
+  // const backendUrl =
+  //   siteConfig.customFields?.CHATBOT_API_URL || 'http://localhost:8000' || 'https://ai-native-book-backend-production-0fd7.up.railway.app/';
+
   const backendUrl =
-    siteConfig.customFields?.CHATBOT_API_URL || 'http://localhost:8000' || 'https://ai-native-book-backend-production-0fd7.up.railway.app/';
+    siteConfig.customFields?.CHATBOT_API_URL || 'https://ai-native-book-backend-production-0fd7.up.railway.app';
 
   const handleNewQuery = (query) => {
     setChatQuery(query);
