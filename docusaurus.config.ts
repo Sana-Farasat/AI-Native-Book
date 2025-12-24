@@ -22,7 +22,7 @@ const config: Config = {
   /** ✅ FIX: browser-safe env exposure */
   customFields: {
     CHATBOT_API_URL:
-      process.env.CHATBOT_API_URL || 'http://localhost:8000' || 'https://ai-native-book-backend-production-0fd7.up.railway.app',
+      process.env.CHATBOT_API_URL || 'http://localhost:8000' || 'https://ai-native-book-backend-production-0fd7.up.railway.app/chat',
   },
 
 
