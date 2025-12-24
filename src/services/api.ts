@@ -88,23 +88,23 @@ class ApiService {
   }
 
   // Get chat history
-  async getHistory(request: HistoryRequest): Promise<HistoryResponse> {
-    const params = new URLSearchParams({
-      session_id: request.session_id,
-      ...(request.limit && { limit: request.limit.toString() }),
-    });
+  // async getHistory(request: HistoryRequest): Promise<HistoryResponse> {
+  //   const params = new URLSearchParams({
+  //     session_id: request.session_id,
+  //     ...(request.limit && { limit: request.limit.toString() }),
+  //   });
 
-    const response = await fetch(`${this.baseUrl}/history?${params}`, { // <-- removed /v1
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-    });
+  //   const response = await fetch(`${this.baseUrl}/history?${params}`, { // <-- removed /v1
+  //     method: 'GET',
+  //     headers: { 'Content-Type': 'application/json' },
+  //   });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+  //   if (!response.ok) {
+  //     throw new Error(`HTTP error! status: ${response.status}`);
+  //   }
 
-    return response.json();
-  }
+  //   return response.json();
+   //}
 
   // Clear session
   async clearSession(sessionId: string): Promise<void> {

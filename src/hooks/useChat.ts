@@ -25,23 +25,23 @@ const useChat = ({ sessionId: initialSessionId, backendUrl }: UseChatOptions): U
   const apiService = new ApiService(backendUrl);
 
   // Load history if we have a session ID
-  useEffect(() => {
-    if (currentSessionId) {
-      loadHistory(currentSessionId);
-    }
-  }, [currentSessionId]);
+  // useEffect(() => {
+  //   if (currentSessionId) {
+  //     loadHistory(currentSessionId);
+  //   }
+  // }, [currentSessionId]);
 
-  const loadHistory = async (sessionId: string) => {
-    try {
-      setIsLoading(true);
-      const response = await apiService.getHistory({ session_id: sessionId });
-      setMessages(response.messages);
-    } catch (error) {
-      console.error('Error loading history:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // const loadHistory = async (sessionId: string) => {
+  //   try {
+  //     setIsLoading(true);
+  //     const response = await apiService.getHistory({ session_id: sessionId });
+  //     setMessages(response.messages);
+  //   } catch (error) {
+  //     console.error('Error loading history:', error);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
   const sendMessage = useCallback(async (message: string, selectedText?: string) => {
     if (!message.trim()) return;
