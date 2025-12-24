@@ -234,3 +234,4 @@ def deploy_model_to_jetson(model_path, device='cuda:0'):
 
 <QuizComponent chapterId="nvidia-isaac" />
 <SummaryComponent chapterId="nvidia-isaac" />
+<PDFDownload pageTitle="The AI-Robot Brain – NVIDIA Isaac Platform & Synthetic Data" />

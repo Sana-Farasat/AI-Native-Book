@@ -295,3 +295,4 @@ class HumanoidVLA:
 
 <QuizComponent chapterId="vla-models" />
 <SummaryComponent chapterId="vla-models" /> 
+<PDFDownload pageTitle="Vision-Language-Action (VLA) Models – From Voice to Physical Action" />

@@ -187,3 +187,4 @@ Critical for humanoid robots due to frequent environmental interactions:
 
 <QuizComponent chapterId="digital-twins" />
 <SummaryComponent chapterId="digital-twins" /> 
+<PDFDownload pageTitle="Digital Twins – Simulation with Gazebo, Isaac Sim & Unity" />

@@ -71,7 +71,7 @@ function Footer(): JSX.Element {
         {/* Copyright and Urdu text */}
         <div className={styles.copyrightSection}>
           <p className={styles.copyright}>
-            Copyright © {new Date().getFullYear()} Your Name – Physical AI
+            Copyright © {new Date().getFullYear()} Sana Farasat – Physical AI
             Textbook
           </p>
           {/* <p className={clsx(styles.urduText, 'ur-text')}>

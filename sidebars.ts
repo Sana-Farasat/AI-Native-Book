@@ -105,14 +105,17 @@ import type { SidebarsConfig } from '@docusaurus/plugin-content-docs';
 const sidebars: SidebarsConfig = {
   tutorialSidebar: [
     'introduction-to-physical-ai/index',
+    'introduction-to-physical-ai/lab-exercise',
     'ros2-deep-dive/index',
+    'ros2-deep-dive/lab-exercise',
     'digital-twins/index',
+    'digital-twins/lab-exercise',
     'nvidia-isaac/index',
     'vision-language-action/index',
     'real-humanoid-robots/index',
     'capstone-project/index',
     'hardware-guide',
-    'chatbot',
+    // 'chatbot',
   ],
 };
 

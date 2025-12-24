@@ -1,0 +1,66 @@
+.selected-text-button {
+  position: fixed;
+  z-index: 10000;
+  transform: translate(-50%, -100%);
+  background-color: #4f65f5;
+  color: white;
+  border: none;
+  border-radius: 18px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+  min-width: 80px;
+  justify-content: center;
+}
+
+.selected-text-button:hover {
+  background-color: #3a51e0;
+  transform: translate(-50%, -100%) scale(1.05);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.selected-text-button:active {
+  transform: translate(-50%, -100%) scale(0.95);
+}
+
+.ask-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Adjust positioning to account for scrollbar */
+.selected-text-button {
+  right: auto;
+  left: auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .selected-text-button {
+    padding: 6px 12px;
+    font-size: 13px;
+    min-width: 70px;
+  }
+  
+  .ask-icon {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .selected-text-button {
+    background-color: #2d3748;
+  }
+  
+  .selected-text-button:hover {
+    background-color: #1a202c;
+  }
+}

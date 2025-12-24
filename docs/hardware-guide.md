@@ -241,3 +241,4 @@ The optimal approach often involves a phased strategy, starting with simulation 
 
 <QuizComponent chapterId="hardware-guide" />
 <SummaryComponent chapterId="hardware-guide" />
+<PDFDownload pageTitle="Hardware Guide" />

@@ -130,3 +130,4 @@ Humanoid robots often require real-time performance for critical functions like 
 
 <QuizComponent chapterId="ros2-deep-dive" />
 <SummaryComponent chapterId="ros2-deep-dive" />
+<PDFDownload pageTitle="The Robotic Nervous System – ROS 2 Deep Dive" />

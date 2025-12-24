@@ -1,15 +1,28 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Layout from '@theme-original/Layout';
 import PDFDownload from '@site/src/components/PDFDownload';
+import FloatingChatButton from '@site/src/components/FloatingChatButton';
+import SelectedTextHandler from '@site/src/components/SelectedTextHandler';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 
 export default function LayoutWrapper(props) {
   const { siteConfig } = useDocusaurusContext();
   const title = props.title || siteConfig.title;
+  const [chatQuery, setChatQuery] = useState('');
+
+  // ✅ ONLY customFields (browser-safe)
+  const backendUrl =
+    siteConfig.customFields?.CHATBOT_API_URL || 'http://localhost:8000' || 'https://ai-native-book-backend-production-0fd7.up.railway.app';
+
+  const handleNewQuery = (query) => {
+    setChatQuery(query);
+  };
 
   return (
    <>
      <Layout {...props} />
+     <SelectedTextHandler backendUrl={backendUrl} onNewQuery={handleNewQuery} />
+     <FloatingChatButton backendUrl={backendUrl} />
 
      {/* PDF Button — sirf docs pages pe dikhega, Summary ke neeche */}
      {props.children?.props?.location?.pathname?.startsWith('/docs') && (

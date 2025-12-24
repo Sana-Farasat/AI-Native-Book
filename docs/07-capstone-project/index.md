@@ -527,3 +527,4 @@ As we advance toward this future, it's crucial to maintain:
 
 <QuizComponent chapterId="capstone-project" />
 <SummaryComponent chapterId="capstone-project" />
+<PDFDownload pageTitle="Capstone Project – Autonomous Conversational Humanoid + Future & Ethics" />

@@ -428,3 +428,4 @@ class HiwonderController:
 
 <QuizComponent chapterId="real-humanoid-robots" />
 <SummaryComponent chapterId="real-humanoid-robots" /> 
+<PDFDownload pageTitle="Building & Controlling Real Humanoid Robots (Unitree G1, Hiwonder, Jetson Edge Kits)" />
