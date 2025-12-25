@@ -2,11 +2,12 @@
   position: fixed;
   z-index: 10000;
   transform: translate(-50%, -100%);
-  background-color: #4f65f5;
+  /* background-color: #4f65f5; */
+  background-color: #553c9a;
   color: white;
   border: none;
   border-radius: 18px;
-  padding: 8px 16px;
+  padding: 10px 26px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -20,7 +21,8 @@
 }
 
 .selected-text-button:hover {
-  background-color: #3a51e0;
+  /* background-color: #3a51e0; */
+  background-color: #54408a;
   transform: translate(-50%, -100%) scale(1.05);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }

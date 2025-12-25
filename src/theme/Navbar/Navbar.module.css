@@ -118,7 +118,7 @@
 } 
 
 /* Mobile Responsive */
-@media (max-width: 426px){
+@media (max-width: 426px){ 
   
 .desktopMenu{
       display: block;
@@ -138,4 +138,4 @@
     font-size: 0.9rem;
   }
 }
-
+ 

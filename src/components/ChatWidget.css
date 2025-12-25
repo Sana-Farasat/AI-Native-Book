@@ -17,7 +17,8 @@
   align-items: center;
   padding: 16px;
   /* background-color: #4f65f5; */
-  background-color: rgba(51, 81, 179, 0.901);
+  /* background-color: rgba(51, 81, 179, 0.901); */
+  background-color: #553c9a;
   color: white;
 }
 
@@ -48,7 +49,7 @@
 
 .clear-btn:hover, .close-btn:hover {
   /* background-color: rgba(255, 255, 255, 0.2); */
-  background-color: rgba(51, 81, 179, 0.901);
+  background-color: #553c9a;
 }
 
 .chat-messages {
@@ -86,7 +87,8 @@
 
 .user-message {
   align-self: flex-end;
-  background-color: #4f65f5;
+  /* background-color: #4f65f5; */
+  background-color: #553c9a;;
   color: white;
   border-bottom-right-radius: 4px;
 }
@@ -134,9 +136,9 @@
   align-self: flex-end;
 }
 
-.copy-btn:hover {
+/* .copy-btn:hover {
   background-color: blue;
-}
+} */
 
 .sources {
   display: flex;
@@ -215,12 +217,14 @@
 }
 
 .chat-input-area textarea:focus {
-  border-color: #4f65f5;
+  /* border-color: #4f65f5; */
+  border-color: #553c9a;
   box-shadow: 0 0 0 2px rgba(79, 101, 245, 0.2);
 }
 
 .send-btn {
-  background-color: rgba(51, 81, 179, 0.901);
+  /* background-color: rgba(51, 81, 179, 0.901); */
+  background-color: #553c9a;
   color: white;
   border: none;
   border-radius: 24px;
@@ -231,7 +235,8 @@
 }
 
 .send-btn:hover:not(:disabled) {
-  background-color: #3a51e0;
+  /* background-color: #3a51e0; */
+  background-color: #553c9a;
 }
 
 .send-btn:disabled {
@@ -302,7 +307,8 @@
   }
   
   .chat-input-area textarea:focus {
-    border-color: #4f65f5;
+    /* border-color: #4f65f5; */
+    border-color: #553c9a;
     box-shadow: 0 0 0 2px rgba(79, 101, 245, 0.3);
   }
 }
