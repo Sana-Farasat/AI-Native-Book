@@ -8,77 +8,77 @@
 
  Create as many sidebars as you want.
  */
-//import type { SidebarsConfig } from '@docusaurus/plugin-content-docs';
+import type { SidebarsConfig } from '@docusaurus/plugin-content-docs';
 
-//const sidebars: SidebarsConfig = {
+const sidebars: SidebarsConfig = {
   // Manual sidebar for the Physical AI & Humanoid Robotics textbook
-  // tutorialSidebar: [
-  //   {
-  //     type: 'category',
-  //     label: 'Physical AI & Humanoid Robotics',
-  //     collapsible: false,
-  //     items: [
-  //       {
-  //         type: 'category',
-  //         label: 'Introduction to Physical AI & Embodied Intelligence',
-  //         link: { type: 'doc', id: 'introduction-to-physical-ai/index' },
-  //         items: [
-  //           'introduction-to-physical-ai/lab-exercise'
-  //         ]
-  //       },
-  //       {
-  //         type: 'category',
-  //         label: 'The Robotic Nervous System – ROS 2 Deep Dive',
-  //         link: { type: 'doc', id: 'ros2-deep-dive/index' },
-  //         items: [
-  //           'ros2-deep-dive/lab-exercise'
-  //         ]
-  //       },
-  //       {
-  //         type: 'category',
-  //         label: 'Digital Twins – Simulation with Gazebo, Isaac Sim & Unity',
-  //         link: { type: 'doc', id: 'digital-twins/index' },
-  //         items: [
-  //           'digital-twins/lab-exercise'
-  //         ]
-  //       },
-  //       {
-  //         type: 'category',
-  //         label: 'The AI-Robot Brain – NVIDIA Isaac Platform & Synthetic Data',
-  //         link: { type: 'doc', id: 'nvidia-isaac/index' },
-  //         items: [
-  //           'nvidia-isaac/lab-exercise'
-  //         ]
-  //       },
-  //       {
-  //         type: 'category',
-  //         label: 'Vision-Language-Action (VLA) Models – From Voice to Physical Action',
-  //         link: { type: 'doc', id: 'vision-language-action/index' },
-  //         items: [
-  //           'vision-language-action/lab-exercise'
-  //         ]
-  //       },
-  //       {
-  //         type: 'category',
-  //         label: 'Building & Controlling Real Humanoid Robots (Unitree G1, Hiwonder, Jetson Edge Kits)',
-  //         link: { type: 'doc', id: 'real-humanoid-robots/index' },
-  //         items: [
-  //           'real-humanoid-robots/lab-exercise'
-  //         ]
-  //       },
-  //       {
-  //         type: 'category',
-  //         label: 'Capstone Project – Autonomous Conversational Humanoid + Future & Ethics',
-  //         link: { type: 'doc', id: 'capstone-project/index' },
-  //         items: [
-  //           'capstone-project/lab-exercise'
-  //         ]
-  //       },
-  //       'hardware-guide',
-  //       'chatbot'
-  //     ]
-  //   }
-  // ],
+  tutorialSidebar: [
+    {
+      type: 'category',
+      label: 'Physical AI & Humanoid Robotics',
+      collapsible: false,
+      items: [
+        {
+          type: 'category',
+          label: 'Introduction to Physical AI & Embodied Intelligence',
+          link: { type: 'doc', id: 'introduction-to-physical-ai/index' },
+          items: [
+            'introduction-to-physical-ai/lab-exercise'
+          ]
+        },
+        {
+          type: 'category',
+          label: 'The Robotic Nervous System – ROS 2 Deep Dive',
+          link: { type: 'doc', id: 'ros2-deep-dive/index' },
+          items: [
+            'ros2-deep-dive/lab-exercise'
+          ]
+        },
+        {
+          type: 'category',
+          label: 'Digital Twins – Simulation with Gazebo, Isaac Sim & Unity',
+          link: { type: 'doc', id: 'digital-twins/index' },
+          items: [
+            'digital-twins/lab-exercise'
+          ]
+        },
+        {
+          type: 'category',
+          label: 'The AI-Robot Brain – NVIDIA Isaac Platform & Synthetic Data',
+          link: { type: 'doc', id: 'nvidia-isaac/index' },
+          items: [
+            'nvidia-isaac/lab-exercise'
+          ]
+        },
+        {
+          type: 'category',
+          label: 'Vision-Language-Action (VLA) Models – From Voice to Physical Action',
+          link: { type: 'doc', id: 'vision-language-action/index' },
+          items: [
+            'vision-language-action/lab-exercise'
+          ]
+        },
+        {
+          type: 'category',
+          label: 'Building & Controlling Real Humanoid Robots (Unitree G1, Hiwonder, Jetson Edge Kits)',
+          link: { type: 'doc', id: 'real-humanoid-robots/index' },
+          items: [
+            'real-humanoid-robots/lab-exercise'
+          ]
+        },
+        {
+          type: 'category',
+          label: 'Capstone Project – Autonomous Conversational Humanoid + Future & Ethics',
+          link: { type: 'doc', id: 'capstone-project/index' },
+          items: [
+            'capstone-project/lab-exercise'
+          ]
+        },
+        'hardware-guide',
+        // 'chatbot'
+      ]
+    }
+  ],
   
   // tutorialSidebar: [
   //   'intro',
@@ -86,37 +86,41 @@
 
 
   // Alternative: Autogenerated sidebar (uncomment to use instead of manual one above)
-  /*
-  tutorialSidebar: [
-    {
-      type: 'autogenerated',
-      dirName: '.',
-    },
-  ],
-  */
-//};
+  
+  // tutorialSidebar: [
+  //   {
+  //     type: 'autogenerated',
+  //     dirName: '.',
+  //   },
+  // ],
+  
+};
 
 // export default sidebars;
 
 
 
-import type { SidebarsConfig } from '@docusaurus/plugin-content-docs';
+// import type { SidebarsConfig } from '@docusaurus/plugin-content-docs';
 
-const sidebars: SidebarsConfig = {
-  tutorialSidebar: [
-    'introduction-to-physical-ai/index',
-    'introduction-to-physical-ai/lab-exercise',
-    'ros2-deep-dive/index',
-    'ros2-deep-dive/lab-exercise',
-    'digital-twins/index',
-    'digital-twins/lab-exercise',
-    'nvidia-isaac/index',
-    'vision-language-action/index',
-    'real-humanoid-robots/index',
-    'capstone-project/index',
-    'hardware-guide',
-    // 'chatbot',
-  ],
-};
+// const sidebars: SidebarsConfig = {
+//   tutorialSidebar: [
+//     'introduction-to-physical-ai/index',
+//     'introduction-to-physical-ai/lab-exercise',
+//     'ros2-deep-dive/index',
+//     'ros2-deep-dive/lab-exercise',
+//     'digital-twins/index',
+//     'digital-twins/lab-exercise',
+//     'nvidia-isaac/index',
+//     'nvidia-isaac/lab-exercise',
+//     'vision-language-action/index',
+//     'vision-language-action/lab-exercise',
+//     'real-humanoid-robots/index',
+//     'real-humanoid-robots/lab-exercise',
+//     'capstone-project/index',
+//     'capstone-project/lab-exercise',
+//     'hardware-guide',
+//     // 'chatbot',
+//   ],
+// };
 
 export default sidebars;
